@@ -102,11 +102,10 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
   }
 
   // Filter events by enabled calendars
+  // Filter events by enabled calendars
   const filteredEvents = events.filter((e) => {
-    if (e.source === "google" && e.calendarId) {
-      return enabledCalendars.has(e.calendarId)
-    }
-    return enabledCalendars.has("local")
+    const calId = e.calendarId || "local"
+    return enabledCalendars.has(calId)
   })
 
   function prevMonth() {
@@ -136,7 +135,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     : []
 
   // Agenda: all events this month sorted by date
-  const agendaEvents = filteredEvents.sort((a, b) =>
+  const agendaEvents = [...filteredEvents].sort((a, b) =>
     a.startTime.localeCompare(b.startTime)
   )
 

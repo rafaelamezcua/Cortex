@@ -6,11 +6,13 @@ type MergedEvent = {
   id: string
   title: string
   description: string | null
+  notes: string | null
   startTime: string
   endTime: string
   allDay: boolean
   color: string | null
   source: "local" | "google"
+  calendarId: string | null
 }
 
 export async function GET(request: Request) {
@@ -28,11 +30,13 @@ export async function GET(request: Request) {
     id: e.id,
     title: e.title,
     description: e.description,
+    notes: e.notes,
     startTime: e.startTime,
     endTime: e.endTime,
     allDay: e.allDay,
     color: e.color,
-    source: "local",
+    source: e.googleCalendarId ? "google" : "local",
+    calendarId: e.googleCalendarId || "local",
   }))
 
   const connected = await isGoogleConnected()
@@ -42,18 +46,29 @@ export async function GET(request: Request) {
         new Date(start).toISOString(),
         new Date(end).toISOString()
       )
-      events.push(
-        ...googleEvents.map((e) => ({
-          id: e.id,
-          title: e.title,
-          description: e.description,
-          startTime: e.startTime,
-          endTime: e.endTime,
-          allDay: e.allDay,
-          color: e.color,
-          source: "google" as const,
-        }))
+      // Only add Google events that don't already exist locally (by googleEventId)
+      const localGoogleIds = new Set(
+        localEvents
+          .filter((e) => e.googleEventId)
+          .map((e) => `gcal-${e.googleEventId}`)
       )
+
+      for (const e of googleEvents) {
+        if (!localGoogleIds.has(e.id)) {
+          events.push({
+            id: e.id,
+            title: e.title,
+            description: e.description,
+            notes: null,
+            startTime: e.startTime,
+            endTime: e.endTime,
+            allDay: e.allDay,
+            color: e.color,
+            source: "google",
+            calendarId: e.calendarId,
+          })
+        }
+      }
     } catch {
       // Fall back to local events only
     }
