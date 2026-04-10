@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+luma.db
+luma.db-wal
+luma.db-shm
+.env*
+drizzle
