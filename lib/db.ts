@@ -33,6 +33,8 @@ sqlite.exec(`
     title TEXT NOT NULL,
     content TEXT,
     pinned INTEGER NOT NULL DEFAULT 0,
+    event_id TEXT,
+    event_date TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -40,11 +42,13 @@ sqlite.exec(`
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
+    notes TEXT,
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
     all_day INTEGER NOT NULL DEFAULT 0,
     color TEXT,
     google_event_id TEXT,
+    google_calendar_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -71,5 +75,19 @@ sqlite.exec(`
     updated_at TEXT NOT NULL
   );
 `)
+
+// Migrate existing tables — add new columns if missing
+try {
+  sqlite.exec(`ALTER TABLE notes ADD COLUMN event_id TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE notes ADD COLUMN event_date TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN notes TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN google_calendar_id TEXT`)
+} catch { /* column already exists */ }
 
 export const db = drizzle(sqlite, { schema })

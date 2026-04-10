@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(node -e \"const ai = require\\('ai'\\); console.log\\(Object.keys\\(ai\\).filter\\(k => k.includes\\('stream'\\) || k.includes\\('Stream'\\)\\)\\)\")"
+      "Bash(node -e \"const ai = require\\('ai'\\); console.log\\(Object.keys\\(ai\\).filter\\(k => k.includes\\('stream'\\) || k.includes\\('Stream'\\)\\)\\)\")",
+      "Bash(rm -rf .next)",
+      "Bash(npx next:*)"
     ]
   }
 }

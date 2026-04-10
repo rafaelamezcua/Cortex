@@ -4,7 +4,13 @@ import { db } from "@/lib/db"
 import { tasks, calendarEvents } from "@/lib/schema"
 import { eq, ne, and, gte, lte } from "drizzle-orm"
 import { nanoid } from "nanoid"
-import { getGoogleCalendarEvents } from "@/lib/integrations/google-calendar"
+import {
+  getGoogleCalendarEvents,
+  createGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+  getGoogleCalendars,
+} from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
 
 export const aiTools = {
@@ -225,7 +231,8 @@ export const aiTools = {
   }),
 
   createCalendarEvent: tool({
-    description: "Create a new calendar event",
+    description:
+      "Create a new calendar event. Can create on Google Calendar or locally. Always defaults to Google Calendar primary if connected.",
     inputSchema: z.object({
       title: z.string().describe("Event title"),
       startTime: z
@@ -236,24 +243,179 @@ export const aiTools = {
         .describe("End time in YYYY-MM-DDTHH:mm format"),
       description: z.string().optional().describe("Event description"),
       allDay: z.boolean().default(false).describe("Whether this is an all-day event"),
+      calendarName: z
+        .string()
+        .optional()
+        .describe("Name of the Google Calendar to add to. Omit for primary calendar."),
     }),
-    execute: async ({ title, startTime, endTime, description, allDay }) => {
+    execute: async ({ title, startTime, endTime, description, allDay, calendarName }) => {
       const now = new Date().toISOString()
+      let googleEventId: string | null = null
+      let googleCalendarId: string | null = null
+
+      const connected = await isGoogleConnected()
+      if (connected) {
+        try {
+          // Find the right calendar
+          let calId = "primary"
+          if (calendarName) {
+            const calendars = await getGoogleCalendars()
+            const match = calendars.find(
+              (c) => c.summary.toLowerCase().includes(calendarName.toLowerCase())
+            )
+            if (match) calId = match.id
+          }
+
+          const gEvent = await createGoogleCalendarEvent({
+            title,
+            description,
+            startTime,
+            endTime,
+            allDay,
+            calendarId: calId,
+          })
+          googleEventId = gEvent.id || null
+          googleCalendarId = calId
+        } catch {
+          // Fall back to local
+        }
+      }
+
+      // Also save locally
       await db.insert(calendarEvents).values({
         id: nanoid(),
         title,
         description: description ?? null,
+        notes: null,
         startTime,
         endTime,
         allDay,
-        color: "#0071e3",
+        color: "#7986cb",
+        googleEventId,
+        googleCalendarId,
         createdAt: now,
         updatedAt: now,
       })
 
+      const target = googleEventId ? "Google Calendar" : "local calendar"
       return {
         success: true,
-        message: `Event "${title}" created for ${startTime}.`,
+        message: `Event "${title}" created on ${target} for ${startTime}.`,
+      }
+    },
+  }),
+
+  editCalendarEvent: tool({
+    description:
+      "Edit an existing calendar event by searching for it by title. Updates both local and Google Calendar.",
+    inputSchema: z.object({
+      title: z
+        .string()
+        .describe("The title (or partial title) of the event to edit"),
+      newTitle: z.string().optional().describe("New title"),
+      newStartTime: z.string().optional().describe("New start time in YYYY-MM-DDTHH:mm format"),
+      newEndTime: z.string().optional().describe("New end time in YYYY-MM-DDTHH:mm format"),
+      newDescription: z.string().optional().describe("New description"),
+    }),
+    execute: async ({ title, newTitle, newStartTime, newEndTime, newDescription }) => {
+      // Search local events
+      const allEvents = await db.select().from(calendarEvents).all()
+      const match = allEvents.find(
+        (e) =>
+          e.title.toLowerCase().includes(title.toLowerCase()) ||
+          title.toLowerCase().includes(e.title.toLowerCase())
+      )
+
+      if (!match) {
+        return { success: false, message: `No event found matching "${title}".` }
+      }
+
+      const updates = {
+        title: newTitle?.trim() || match.title,
+        description: newDescription ?? match.description,
+        startTime: newStartTime || match.startTime,
+        endTime: newEndTime || match.endTime,
+        updatedAt: new Date().toISOString(),
+      }
+
+      await db.update(calendarEvents).set(updates).where(eq(calendarEvents.id, match.id))
+
+      // Sync to Google if linked
+      if (match.googleEventId && match.googleCalendarId) {
+        const connected = await isGoogleConnected()
+        if (connected) {
+          try {
+            await updateGoogleCalendarEvent({
+              googleEventId: match.googleEventId,
+              title: updates.title,
+              description: updates.description || undefined,
+              startTime: updates.startTime,
+              endTime: updates.endTime,
+              calendarId: match.googleCalendarId,
+            })
+          } catch {
+            // Local update already done
+          }
+        }
+      }
+
+      return { success: true, message: `Event "${match.title}" updated.` }
+    },
+  }),
+
+  deleteCalendarEvent: tool({
+    description: "Delete a calendar event by title. Removes from both local and Google Calendar.",
+    inputSchema: z.object({
+      title: z
+        .string()
+        .describe("The title (or partial title) of the event to delete"),
+    }),
+    execute: async ({ title }) => {
+      const allEvents = await db.select().from(calendarEvents).all()
+      const match = allEvents.find(
+        (e) =>
+          e.title.toLowerCase().includes(title.toLowerCase()) ||
+          title.toLowerCase().includes(e.title.toLowerCase())
+      )
+
+      if (!match) {
+        return { success: false, message: `No event found matching "${title}".` }
+      }
+
+      // Delete from Google if linked
+      if (match.googleEventId && match.googleCalendarId) {
+        const connected = await isGoogleConnected()
+        if (connected) {
+          try {
+            await deleteGoogleCalendarEvent(match.googleEventId, match.googleCalendarId)
+          } catch {
+            // Continue with local delete
+          }
+        }
+      }
+
+      await db.delete(calendarEvents).where(eq(calendarEvents.id, match.id))
+
+      return { success: true, message: `Event "${match.title}" deleted.` }
+    },
+  }),
+
+  listCalendars: tool({
+    description: "List all available Google Calendars the user can add events to.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const connected = await isGoogleConnected()
+      if (!connected) {
+        return { calendars: [], message: "Google Calendar is not connected." }
+      }
+
+      const calendars = await getGoogleCalendars()
+      return {
+        calendars: calendars.map((c) => ({
+          name: c.summary,
+          primary: c.primary,
+        })),
+        count: calendars.length,
       }
     },
   }),

@@ -21,6 +21,8 @@ export const notes = sqliteTable("notes", {
   title: text("title").notNull(),
   content: text("content"),
   pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
+  eventId: text("event_id"),
+  eventDate: text("event_date"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
@@ -29,11 +31,13 @@ export const calendarEvents = sqliteTable("calendar_events", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
+  notes: text("notes"),
   startTime: text("start_time").notNull(),
   endTime: text("end_time").notNull(),
   allDay: integer("all_day", { mode: "boolean" }).notNull().default(false),
   color: text("color"),
   googleEventId: text("google_event_id"),
+  googleCalendarId: text("google_calendar_id"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
