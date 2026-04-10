@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { MonthView } from "./month-view"
+import { WeekView } from "./week-view"
 import { DayView } from "./day-view"
 import { CalendarSidebar } from "./calendar-sidebar"
 import { EventForm } from "./event-form"
 import { EventPreview } from "./event-preview"
 import { Button } from "@/app/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Rows3 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Rows3, CalendarDays } from "lucide-react"
 import { getMonthName } from "@/lib/calendar-utils"
 import { cn } from "@/lib/utils"
 
@@ -35,7 +36,7 @@ interface CalendarViewProps {
   initialEvents: CalendarEvent[]
 }
 
-type ViewMode = "month" | "agenda"
+type ViewMode = "month" | "week" | "agenda"
 
 export function CalendarView({ initialEvents }: CalendarViewProps) {
   const now = new Date()
@@ -46,6 +47,11 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
   )
   const [viewMode, setViewMode] = useState<ViewMode>("month")
   const [showForm, setShowForm] = useState(false)
+  const [formDefaults, setFormDefaults] = useState<{
+    date?: string
+    startTime?: string
+    endTime?: string
+  }>({})
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const [previewEvent, setPreviewEvent] = useState<CalendarEvent | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
@@ -87,10 +93,51 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     fetchEvents()
   }, [fetchEvents])
 
-  // Re-fetch after form close
   useEffect(() => {
     if (!showForm && !editingEvent) fetchEvents()
   }, [showForm, editingEvent, fetchEvents])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (showForm || editingEvent || previewEvent) return
+
+      switch (e.key) {
+        case "t":
+          e.preventDefault()
+          goToToday()
+          break
+        case "n":
+          e.preventDefault()
+          setFormDefaults({ date: selectedDate || undefined })
+          setShowForm(true)
+          break
+        case "m":
+          e.preventDefault()
+          setViewMode("month")
+          break
+        case "w":
+          e.preventDefault()
+          setViewMode("week")
+          break
+        case "a":
+          e.preventDefault()
+          setViewMode("agenda")
+          break
+        case "ArrowLeft":
+          e.preventDefault()
+          prevPeriod()
+          break
+        case "ArrowRight":
+          e.preventDefault()
+          nextPeriod()
+          break
+      }
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [showForm, editingEvent, previewEvent, selectedDate, viewMode, year, month])
 
   function toggleCalendar(id: string) {
     setEnabledCalendars((prev) => {
@@ -101,21 +148,33 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     })
   }
 
-  // Filter events by enabled calendars
-  // Filter events by enabled calendars
   const filteredEvents = events.filter((e) => {
     const calId = e.calendarId || "local"
     return enabledCalendars.has(calId)
   })
 
-  function prevMonth() {
-    if (month === 0) { setMonth(11); setYear(year - 1) }
-    else setMonth(month - 1)
+  function prevPeriod() {
+    if (viewMode === "week") {
+      const d = new Date(year, month, 1)
+      d.setDate(d.getDate() - 7)
+      setYear(d.getFullYear())
+      setMonth(d.getMonth())
+    } else {
+      if (month === 0) { setMonth(11); setYear(year - 1) }
+      else setMonth(month - 1)
+    }
   }
 
-  function nextMonth() {
-    if (month === 11) { setMonth(0); setYear(year + 1) }
-    else setMonth(month + 1)
+  function nextPeriod() {
+    if (viewMode === "week") {
+      const d = new Date(year, month, 28)
+      d.setDate(d.getDate() + 7)
+      setYear(d.getFullYear())
+      setMonth(d.getMonth())
+    } else {
+      if (month === 11) { setMonth(0); setYear(year + 1) }
+      else setMonth(month + 1)
+    }
   }
 
   function goToToday() {
@@ -130,16 +189,43 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     setMonth(m)
   }
 
+  function handleEventClick(event: CalendarEvent) {
+    setPreviewEvent(event)
+  }
+
+  function handleWeekCreateEvent(date: string, hour: number) {
+    const startTime = `${date}T${String(hour).padStart(2, "0")}:00`
+    const endTime = `${date}T${String(hour + 1).padStart(2, "0")}:00`
+    setFormDefaults({ date, startTime, endTime })
+    setShowForm(true)
+  }
+
+  function handleNewEvent() {
+    setFormDefaults({ date: selectedDate || undefined })
+    setShowForm(true)
+  }
+
   const selectedEvents = selectedDate
     ? filteredEvents.filter((e) => e.startTime.startsWith(selectedDate))
     : []
 
-  // Agenda: all events this month sorted by date
+  // Conflict detection — find overlapping events for the selected date
+  const conflicts: string[] = []
+  for (let i = 0; i < selectedEvents.length; i++) {
+    for (let j = i + 1; j < selectedEvents.length; j++) {
+      const a = selectedEvents[i]
+      const b = selectedEvents[j]
+      if (a.allDay || b.allDay) continue
+      if (a.startTime < b.endTime && b.startTime < a.endTime) {
+        conflicts.push(`"${a.title}" overlaps with "${b.title}"`)
+      }
+    }
+  }
+
+  // Agenda grouped by date
   const agendaEvents = [...filteredEvents].sort((a, b) =>
     a.startTime.localeCompare(b.startTime)
   )
-
-  // Group agenda by date
   const agendaByDate = new Map<string, CalendarEvent[]>()
   for (const e of agendaEvents) {
     const dateKey = e.startTime.split("T")[0]
@@ -147,9 +233,10 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     agendaByDate.get(dateKey)!.push(e)
   }
 
-  function handleEventClick(event: CalendarEvent) {
-    setPreviewEvent(event)
-  }
+  const headerLabel =
+    viewMode === "week"
+      ? `${getMonthName(month)} ${year}`
+      : `${getMonthName(month)} ${year}`
 
   return (
     <div className="flex gap-6 -mx-4 sm:-mx-8">
@@ -165,6 +252,28 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
           onSelectDate={setSelectedDate}
           onNavigateMonth={handleNavigateMonth}
         />
+
+        {/* Keyboard shortcuts hint */}
+        <div className="mt-6 space-y-1">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary mb-2">
+            Shortcuts
+          </h3>
+          {[
+            ["T", "Today"],
+            ["N", "New event"],
+            ["M", "Month view"],
+            ["W", "Week view"],
+            ["A", "Agenda view"],
+            ["← →", "Navigate"],
+          ].map(([key, label]) => (
+            <div key={key} className="flex items-center gap-2">
+              <kbd className="inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-border bg-background-secondary px-1 text-[10px] font-medium text-foreground-quaternary">
+                {key}
+              </kbd>
+              <span className="text-[11px] text-foreground-quaternary">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Main content */}
@@ -174,17 +283,17 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-semibold tracking-tight">
-                {getMonthName(month)} {year}
+                {headerLabel}
               </h2>
               <div className="flex items-center gap-0.5">
                 <button
-                  onClick={prevMonth}
+                  onClick={prevPeriod}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary transition-colors hover:bg-surface-hover"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={nextMonth}
+                  onClick={nextPeriod}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary transition-colors hover:bg-surface-hover"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -209,9 +318,21 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                       ? "bg-surface text-foreground shadow-sm"
                       : "text-foreground-tertiary hover:text-foreground"
                   )}
-                  title="Month view"
+                  title="Month view (M)"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("week")}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
+                    viewMode === "week"
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-foreground-tertiary hover:text-foreground"
+                  )}
+                  title="Week view (W)"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => setViewMode("agenda")}
@@ -221,21 +342,31 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                       ? "bg-surface text-foreground shadow-sm"
                       : "text-foreground-tertiary hover:text-foreground"
                   )}
-                  title="Agenda view"
+                  title="Agenda view (A)"
                 >
                   <Rows3 className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              <Button size="sm" onClick={() => setShowForm(true)}>
+              <Button size="sm" onClick={handleNewEvent}>
                 <Plus className="h-4 w-4" />
                 New Event
               </Button>
             </div>
           </div>
 
+          {/* Conflict warnings */}
+          {conflicts.length > 0 && (
+            <div className="rounded-[--radius-md] border border-warning/30 bg-warning/5 px-4 py-2.5">
+              <p className="text-xs font-medium text-warning">
+                Schedule conflict: {conflicts[0]}
+                {conflicts.length > 1 && ` (+${conflicts.length - 1} more)`}
+              </p>
+            </div>
+          )}
+
           {/* Views */}
-          {viewMode === "month" ? (
+          {viewMode === "month" && (
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_280px]">
               <MonthView
                 year={year}
@@ -249,14 +380,24 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                   <DayView
                     date={selectedDate}
                     events={selectedEvents}
-                    onCreateEvent={() => setShowForm(true)}
+                    onCreateEvent={handleNewEvent}
                     onEditEvent={handleEventClick}
                   />
                 </div>
               )}
             </div>
-          ) : (
-            /* Agenda view */
+          )}
+
+          {viewMode === "week" && (
+            <WeekView
+              startDate={new Date(year, month, selectedDate ? parseInt(selectedDate.split("-")[2]) : 1)}
+              events={filteredEvents}
+              onSelectEvent={handleEventClick}
+              onCreateEvent={handleWeekCreateEvent}
+            />
+          )}
+
+          {viewMode === "agenda" && (
             <div className="space-y-4">
               {agendaByDate.size === 0 ? (
                 <p className="py-12 text-center text-sm text-foreground-tertiary">
@@ -270,7 +411,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                     month: "short",
                     day: "numeric",
                   })
-                  const isToday = dateKey === new Date().toISOString().split("T")[0]
+                  const todayKey = new Date().toISOString().split("T")[0]
 
                   return (
                     <div key={dateKey} className="flex gap-4">
@@ -278,7 +419,9 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                         <p
                           className={cn(
                             "text-sm font-medium",
-                            isToday ? "text-accent" : "text-foreground-secondary"
+                            dateKey === todayKey
+                              ? "text-accent"
+                              : "text-foreground-secondary"
                           )}
                         >
                           {label}
@@ -293,7 +436,10 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                           >
                             <div
                               className="h-8 w-1 shrink-0 rounded-full"
-                              style={{ backgroundColor: event.color || "var(--accent)" }}
+                              style={{
+                                backgroundColor:
+                                  event.color || "var(--accent)",
+                              }}
                             />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium truncate">
@@ -320,8 +466,11 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
       {/* Modals */}
       {showForm && (
         <EventForm
-          defaultDate={selectedDate ?? undefined}
-          onClose={() => setShowForm(false)}
+          defaultDate={formDefaults.date}
+          onClose={() => {
+            setShowForm(false)
+            setFormDefaults({})
+          }}
         />
       )}
       {editingEvent && (

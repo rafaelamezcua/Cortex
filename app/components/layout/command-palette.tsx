@@ -10,6 +10,7 @@ import {
   Search,
   Sun,
   Moon,
+  CalendarDays,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useCallback } from "react"
@@ -18,6 +19,7 @@ import { useTheme } from "@/app/components/theme-provider"
 interface Command {
   id: string
   label: string
+  subtitle?: string
   icon: React.ElementType
   action: () => void
   section: string
@@ -27,11 +29,12 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [searchResults, setSearchResults] = useState<Command[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const { resolved, setTheme } = useTheme()
 
-  const commands: Command[] = [
+  const staticCommands: Command[] = [
     { id: "dashboard", label: "Go to Dashboard", icon: LayoutDashboard, action: () => router.push("/"), section: "Navigation" },
     { id: "chat", label: "Go to Chat", icon: MessageCircle, action: () => router.push("/chat"), section: "Navigation" },
     { id: "calendar", label: "Go to Calendar", icon: Calendar, action: () => router.push("/calendar"), section: "Navigation" },
@@ -46,9 +49,57 @@ export function CommandPalette() {
     },
   ]
 
+  // Search events when query changes
+  useEffect(() => {
+    if (!query || query.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
+    const end = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString()
+
+    fetch(`/api/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const events = data.events || []
+        const matched = events
+          .filter((e: { title: string }) =>
+            e.title.toLowerCase().includes(query.toLowerCase())
+          )
+          .slice(0, 5)
+          .map((e: { id: string; title: string; startTime: string }) => ({
+            id: `event-${e.id}`,
+            label: e.title,
+            subtitle: new Date(e.startTime).toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            }),
+            icon: CalendarDays,
+            action: () => {
+              const dateKey = e.startTime.split("T")[0]
+              router.push(`/calendar`)
+            },
+            section: "Events",
+          }))
+        setSearchResults(matched)
+      })
+      .catch(() => setSearchResults([]))
+  }, [query, router])
+
+  const allCommands = [...searchResults, ...staticCommands]
+
   const filtered = query
-    ? commands.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()))
-    : commands
+    ? allCommands.filter(
+        (c) =>
+          c.section === "Events" ||
+          c.label.toLowerCase().includes(query.toLowerCase())
+      )
+    : staticCommands
 
   const sections = new Map<string, Command[]>()
   for (const cmd of filtered) {
@@ -106,7 +157,6 @@ export function CommandPalette() {
         onClick={() => setOpen(false)}
       />
       <div className="relative w-full max-w-lg rounded-[--radius-xl] border border-border-light/40 bg-surface/95 backdrop-blur-2xl shadow-lg overflow-hidden">
-        {/* Search */}
         <div className="flex items-center gap-3 border-b border-border-light/40 px-5">
           <Search className="h-4 w-4 shrink-0 text-foreground-quaternary" />
           <input
@@ -114,7 +164,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search commands..."
+            placeholder="Search commands, events..."
             className="h-14 w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-foreground-quaternary"
           />
           <kbd className="hidden shrink-0 rounded-[6px] border border-border bg-background-secondary px-2 py-1 text-[11px] font-medium text-foreground-quaternary sm:inline">
@@ -122,8 +172,7 @@ export function CommandPalette() {
           </kbd>
         </div>
 
-        {/* Results */}
-        <div className="max-h-72 overflow-y-auto p-2">
+        <div className="max-h-80 overflow-y-auto p-2">
           {filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-foreground-tertiary">
               No results found
@@ -151,10 +200,26 @@ export function CommandPalette() {
                       <cmd.icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          globalIndex === selectedIndex ? "text-white" : "text-foreground-tertiary"
+                          globalIndex === selectedIndex
+                            ? "text-white"
+                            : "text-foreground-tertiary"
                         )}
                       />
-                      <span className="font-medium">{cmd.label}</span>
+                      <div className="flex-1 text-left min-w-0">
+                        <span className="font-medium">{cmd.label}</span>
+                        {cmd.subtitle && (
+                          <span
+                            className={cn(
+                              "ml-2 text-xs",
+                              globalIndex === selectedIndex
+                                ? "text-white/70"
+                                : "text-foreground-quaternary"
+                            )}
+                          >
+                            {cmd.subtitle}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   )
                 })}
