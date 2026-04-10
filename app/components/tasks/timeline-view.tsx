@@ -1,9 +1,9 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState, useRef, useTransition } from "react"
+import { useState, useRef, useTransition, useEffect } from "react"
 import { TaskModal } from "./task-modal"
-import { updateTask } from "@/lib/actions/tasks"
+import { updateTask, getTasks } from "@/lib/actions/tasks"
 
 type Task = {
   id: string
@@ -31,12 +31,18 @@ const statusColors: Record<string, string> = {
 
 const TOTAL_DAYS = 28
 const PAST_DAYS = 7
-const MIN_DRAG_PX = 15 // minimum pixels before drag counts
+const MIN_DRAG_PX = 15
 
-export function TimelineView({ tasks }: { tasks: Task[] }) {
+export function TimelineView({ tasks: initialTasks }: { tasks: Task[] }) {
+  const [tasks, setTasks] = useState(initialTasks)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [, startTransition] = useTransition()
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Sync with prop changes
+  useEffect(() => {
+    setTasks(initialTasks)
+  }, [initialTasks])
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
@@ -58,32 +64,18 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
     })
   }
 
-  const tasksWithDates = tasks.filter((t) => t.dueDate || t.createdAt)
   const allDisplayTasks = [
-    ...tasksWithDates.filter((t) => t.status !== "done"),
-    ...tasksWithDates.filter((t) => t.status === "done"),
+    ...tasks.filter((t) => t.dueDate && t.status !== "done"),
+    ...tasks.filter((t) => t.dueDate && t.status === "done"),
   ].slice(0, 25)
 
-  function getBarPosition(task: Task) {
-    const created = new Date(task.createdAt)
-    const due = task.dueDate
-      ? new Date(task.dueDate + "T23:59:59")
-      : new Date(created.getTime() + 86400000)
-
-    const startOffset = Math.max(
-      0,
-      (created.getTime() - timelineStart.getTime()) / (1000 * 60 * 60 * 24)
-    )
-    const endOffset = Math.min(
-      TOTAL_DAYS,
-      (due.getTime() - timelineStart.getTime()) / (1000 * 60 * 60 * 24)
-    )
-
+  // Bar position: due date determines the END of the bar, 1 day wide
+  function getBarPosition(dueDate: string) {
+    const due = new Date(dueDate + "T12:00:00")
+    const dayOffset = (due.getTime() - timelineStart.getTime()) / (1000 * 60 * 60 * 24)
     const dayWidth = 100 / TOTAL_DAYS
-    const left = (startOffset / TOTAL_DAYS) * 100
-    const width = Math.max(((endOffset - startOffset) / TOTAL_DAYS) * 100, dayWidth)
-
-    return { left: `${left}%`, width: `${width}%` }
+    const left = Math.max(0, Math.min((dayOffset / TOTAL_DAYS) * 100, 100 - dayWidth))
+    return { left: `${left}%`, width: `${dayWidth * 2}%` }
   }
 
   function handleBarMouseDown(e: React.MouseEvent, task: Task) {
@@ -92,48 +84,46 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
 
     const startX = e.clientX
     let didDrag = false
+    let finalDeltaDays = 0
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = Math.abs(moveEvent.clientX - startX)
-      if (delta > MIN_DRAG_PX) {
-        didDrag = true
-        // Visual feedback
-        if (!containerRef.current) return
-        const containerWidth = containerRef.current.offsetWidth - 160
-        const pixelsPerDay = containerWidth / TOTAL_DAYS
-        const deltaDays = Math.round((moveEvent.clientX - startX) / pixelsPerDay)
+      if (delta > MIN_DRAG_PX) didDrag = true
+      if (!didDrag || !containerRef.current) return
 
-        const bar = document.querySelector(`[data-task-bar="${task.id}"]`) as HTMLElement
-        if (bar && deltaDays !== 0) {
-          const origDate = new Date(task.dueDate! + "T12:00:00")
-          origDate.setDate(origDate.getDate() + deltaDays)
-          const tempTask = { ...task, dueDate: `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}` }
-          const pos = getBarPosition(tempTask)
-          bar.style.left = pos.left
-          bar.style.width = pos.width
-        }
+      const containerWidth = containerRef.current.offsetWidth - 160
+      const pixelsPerDay = containerWidth / TOTAL_DAYS
+      finalDeltaDays = Math.round((moveEvent.clientX - startX) / pixelsPerDay)
+
+      const bar = document.querySelector(`[data-task-bar="${task.id}"]`) as HTMLElement
+      if (bar && task.dueDate) {
+        const origDate = new Date(task.dueDate + "T12:00:00")
+        origDate.setDate(origDate.getDate() + finalDeltaDays)
+        const newDateStr = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}`
+        const pos = getBarPosition(newDateStr)
+        bar.style.left = pos.left
+        bar.style.width = pos.width
       }
     }
 
-    const handleMouseUp = (upEvent: MouseEvent) => {
+    const handleMouseUp = () => {
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
 
       if (!didDrag) {
-        // It was a click, not a drag — open modal
         setEditingTask(task)
         return
       }
 
-      if (!containerRef.current) return
-      const containerWidth = containerRef.current.offsetWidth - 160
-      const pixelsPerDay = containerWidth / TOTAL_DAYS
-      const deltaDays = Math.round((upEvent.clientX - startX) / pixelsPerDay)
-
-      if (deltaDays !== 0) {
-        const origDate = new Date(task.dueDate! + "T12:00:00")
-        origDate.setDate(origDate.getDate() + deltaDays)
+      if (finalDeltaDays !== 0 && task.dueDate) {
+        const origDate = new Date(task.dueDate + "T12:00:00")
+        origDate.setDate(origDate.getDate() + finalDeltaDays)
         const newDate = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}`
+
+        // Optimistic update
+        setTasks((prev) =>
+          prev.map((t) => (t.id === task.id ? { ...t, dueDate: newDate } : t))
+        )
 
         startTransition(async () => {
           const formData = new FormData()
@@ -150,10 +140,19 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
     window.addEventListener("mouseup", handleMouseUp)
   }
 
+  // Refresh data when modal closes
+  function handleModalClose() {
+    setEditingTask(null)
+    startTransition(async () => {
+      const fresh = await getTasks()
+      setTasks(fresh)
+    })
+  }
+
   if (allDisplayTasks.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-foreground-tertiary">
-        No tasks with dates. Add due dates to see the timeline.
+        No tasks with due dates. Add due dates to see the timeline.
       </p>
     )
   }
@@ -205,14 +204,14 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
 
           {/* Task rows */}
           {allDisplayTasks.map((task) => {
-            const pos = getBarPosition(task)
+            if (!task.dueDate) return null
+            const pos = getBarPosition(task.dueDate)
             const isDone = task.status === "done"
-            const hasDueDate = !!task.dueDate
 
             return (
               <div
                 key={task.id}
-                className="flex border-b border-border-light/20 last:border-b-0 group"
+                className="flex border-b border-border-light/20 last:border-b-0"
               >
                 <div
                   className="w-40 shrink-0 border-r border-border-light/40 px-3 py-3 flex items-center gap-2 cursor-pointer hover:bg-surface-hover/50 transition-colors"
@@ -241,9 +240,8 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
                   <div
                     data-task-bar={task.id}
                     className={cn(
-                      "absolute top-2 h-6 rounded-full transition-opacity",
-                      isDone && "opacity-40",
-                      hasDueDate && !isDone ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+                      "absolute top-2 h-6 rounded-full",
+                      isDone ? "opacity-40 cursor-pointer" : "cursor-grab active:cursor-grabbing",
                     )}
                     style={{
                       left: pos.left,
@@ -252,7 +250,7 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
                     }}
                     onMouseDown={(e) => handleBarMouseDown(e, task)}
                   >
-                    <span className="absolute inset-0 flex items-center px-2 text-[9px] font-semibold text-white truncate pointer-events-none">
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-white truncate px-1 pointer-events-none">
                       {task.title}
                     </span>
                   </div>
@@ -264,7 +262,7 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
       </div>
 
       {editingTask && (
-        <TaskModal task={editingTask} onClose={() => setEditingTask(null)} />
+        <TaskModal task={editingTask} onClose={handleModalClose} />
       )}
     </>
   )
