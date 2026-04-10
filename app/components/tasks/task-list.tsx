@@ -1,6 +1,7 @@
 "use client"
 
 import { TaskItem } from "./task-item"
+import { TaskModal } from "./task-modal"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -26,6 +27,7 @@ const filters: { value: Filter; label: string }[] = [
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
   const [filter, setFilter] = useState<Filter>("all")
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const filtered = tasks.filter((t) => {
     if (filter === "active") return t.status !== "done"
@@ -33,31 +35,24 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
     return true
   })
 
-  const activeCount = tasks.filter((t) => t.status !== "done").length
-
   return (
     <div className="space-y-4">
-      {/* Filter tabs + count */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 rounded-[--radius-md] bg-background-secondary p-1">
-          {filters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={cn(
-                "rounded-[--radius-sm] px-3 py-1.5 text-xs font-medium transition-colors duration-150",
-                filter === f.value
-                  ? "bg-surface text-foreground shadow-sm"
-                  : "text-foreground-tertiary hover:text-foreground-secondary"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <span className="text-xs text-foreground-tertiary">
-          {activeCount} active
-        </span>
+      {/* Filter tabs */}
+      <div className="flex gap-1 rounded-[--radius-md] bg-background-secondary p-1 w-fit">
+        {filters.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => setFilter(f.value)}
+            className={cn(
+              "rounded-[--radius-sm] px-3 py-1.5 text-xs font-medium transition-colors duration-150",
+              filter === f.value
+                ? "bg-surface text-foreground shadow-sm"
+                : "text-foreground-tertiary hover:text-foreground-secondary"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Task items */}
@@ -71,9 +66,23 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                 : "No tasks yet. Add one above."}
           </p>
         ) : (
-          filtered.map((task) => <TaskItem key={task.id} task={task} />)
+          filtered.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onClick={() => setEditingTask(task)}
+            />
+          ))
         )}
       </div>
+
+      {/* Edit modal */}
+      {editingTask && (
+        <TaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+        />
+      )}
     </div>
   )
 }

@@ -2,8 +2,9 @@
 
 import { cn } from "@/lib/utils"
 import { getCalendarGrid, isToday, formatDateKey, getMonthName } from "@/lib/calendar-utils"
-import { ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react"
-import { useState } from "react"
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { useState, useTransition } from "react"
+import { createLocalCalendar } from "@/lib/actions/local-calendars"
 
 interface CalendarInfo {
   id: string
@@ -191,7 +192,80 @@ export function CalendarSidebar({
               </span>
             </button>
           ))}
+          {/* Create new calendar */}
+          <CreateCalendarButton onCreated={(id) => onToggleCalendar(id)} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+const calColors = [
+  "#7986cb", "#33b679", "#8e24aa", "#e67c73",
+  "#f6bf26", "#f4511e", "#039be5", "#616161",
+]
+
+function CreateCalendarButton({ onCreated }: { onCreated: (id: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [name, setName] = useState("")
+  const [color, setColor] = useState(calColors[0])
+  const [isPending, startTransition] = useTransition()
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex w-full items-center gap-2 rounded-[--radius-md] px-2 py-2 text-xs text-foreground-tertiary transition-colors hover:bg-surface-hover hover:text-accent"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        New calendar
+      </button>
+    )
+  }
+
+  return (
+    <div className="rounded-[--radius-md] border border-border-light bg-background p-2.5 space-y-2">
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Calendar name"
+        autoFocus
+        className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-foreground-quaternary"
+      />
+      <div className="flex gap-1.5">
+        {calColors.map((c) => (
+          <button
+            key={c}
+            onClick={() => setColor(c)}
+            className={cn(
+              "h-5 w-5 rounded-full transition-transform",
+              color === c && "scale-125 ring-2 ring-offset-1 ring-offset-background"
+            )}
+            style={{ backgroundColor: c, "--tw-ring-color": c } as React.CSSProperties}
+          />
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => { setIsOpen(false); setName("") }}
+          className="flex-1 rounded px-2 py-1 text-[11px] text-foreground-tertiary hover:bg-surface-hover"
+        >
+          Cancel
+        </button>
+        <button
+          disabled={!name.trim() || isPending}
+          onClick={() => {
+            startTransition(async () => {
+              const id = await createLocalCalendar(name.trim(), color)
+              onCreated(`local-${id}`)
+              setIsOpen(false)
+              setName("")
+            })
+          }}
+          className="flex-1 rounded bg-accent px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+        >
+          Create
+        </button>
       </div>
     </div>
   )

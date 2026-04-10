@@ -58,6 +58,13 @@ export const chatMessages = sqliteTable("chat_messages", {
   createdAt: text("created_at").notNull(),
 })
 
+export const localCalendars = sqliteTable("local_calendars", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  createdAt: text("created_at").notNull(),
+})
+
 export const memories = sqliteTable("memories", {
   id: text("id").primaryKey(),
   category: text("category", {

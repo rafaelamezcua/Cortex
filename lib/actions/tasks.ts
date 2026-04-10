@@ -80,15 +80,23 @@ export async function updateTask(id: string, formData: FormData) {
   const title = formData.get("title") as string
   if (!title?.trim()) return
 
+  const updates: Record<string, unknown> = {
+    title: title.trim(),
+    description: (formData.get("description") as string) || null,
+    priority: (formData.get("priority") as "low" | "medium" | "high") ?? "medium",
+    dueDate: (formData.get("dueDate") as string) || null,
+    updatedAt: now,
+  }
+
+  // Allow status update from modal
+  const status = formData.get("status") as string | null
+  if (status && ["todo", "in_progress", "done"].includes(status)) {
+    updates.status = status
+  }
+
   await db
     .update(tasks)
-    .set({
-      title: title.trim(),
-      description: (formData.get("description") as string) || null,
-      priority: (formData.get("priority") as "low" | "medium" | "high") ?? "medium",
-      dueDate: (formData.get("dueDate") as string) || null,
-      updatedAt: now,
-    })
+    .set(updates)
     .where(eq(tasks.id, id))
 
   revalidatePath("/tasks")

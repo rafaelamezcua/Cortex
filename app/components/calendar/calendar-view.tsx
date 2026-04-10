@@ -45,7 +45,12 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(
     formatDateKey(now)
   )
-  const [viewMode, setViewMode] = useState<ViewMode>("month")
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("luma-cal-view") as ViewMode) || "month"
+    }
+    return "month"
+  })
   const [showForm, setShowForm] = useState(false)
   const [formDefaults, setFormDefaults] = useState<{
     date?: string
@@ -56,9 +61,15 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
   const [previewEvent, setPreviewEvent] = useState<CalendarEvent | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [calendars, setCalendars] = useState<CalendarInfo[]>([])
-  const [enabledCalendars, setEnabledCalendars] = useState<Set<string>>(
-    new Set(["local"])
-  )
+  const [enabledCalendars, setEnabledCalendars] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("luma-cal-enabled")
+      if (saved) {
+        try { return new Set(JSON.parse(saved)) } catch {}
+      }
+    }
+    return new Set(["local"])
+  })
 
   // Fetch Google Calendar list
   useEffect(() => {
@@ -115,15 +126,15 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
           break
         case "m":
           e.preventDefault()
-          setViewMode("month")
+          changeViewMode("month")
           break
         case "w":
           e.preventDefault()
-          setViewMode("week")
+          changeViewMode("week")
           break
         case "a":
           e.preventDefault()
-          setViewMode("agenda")
+          changeViewMode("agenda")
           break
         case "ArrowLeft":
           e.preventDefault()
@@ -144,8 +155,14 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      localStorage.setItem("luma-cal-enabled", JSON.stringify([...next]))
       return next
     })
+  }
+
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode)
+    localStorage.setItem("luma-cal-view", mode)
   }
 
   const filteredEvents = events.filter((e) => {
@@ -311,7 +328,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
               {/* View switcher */}
               <div className="flex rounded-[--radius-md] border border-border-light bg-background-secondary p-0.5">
                 <button
-                  onClick={() => setViewMode("month")}
+                  onClick={() => changeViewMode("month")}
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
                     viewMode === "month"
@@ -323,7 +340,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                   <LayoutGrid className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => setViewMode("week")}
+                  onClick={() => changeViewMode("week")}
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
                     viewMode === "week"
@@ -335,7 +352,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                   <CalendarDays className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => setViewMode("agenda")}
+                  onClick={() => changeViewMode("agenda")}
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
                     viewMode === "agenda"

@@ -14,6 +14,7 @@ interface TaskItemProps {
     priority: string
     dueDate: string | null
   }
+  onClick?: () => void
 }
 
 const priorityColors: Record<string, string> = {
@@ -22,7 +23,7 @@ const priorityColors: Record<string, string> = {
   high: "bg-danger",
 }
 
-export function TaskItem({ task }: TaskItemProps) {
+export function TaskItem({ task, onClick }: TaskItemProps) {
   const [isPending, startTransition] = useTransition()
   const isDone = task.status === "done"
 
@@ -49,7 +50,7 @@ export function TaskItem({ task }: TaskItemProps) {
       </button>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
         <div className="flex items-center gap-2">
           <span
             className={cn(

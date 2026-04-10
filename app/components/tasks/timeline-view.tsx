@@ -2,8 +2,9 @@
 
 import { cn } from "@/lib/utils"
 import { toggleTask, deleteTask } from "@/lib/actions/tasks"
-import { Check, Trash2, Circle, AlertTriangle } from "lucide-react"
-import { useTransition } from "react"
+import { Check, Trash2 } from "lucide-react"
+import { useState, useTransition } from "react"
+import { TaskModal } from "./task-modal"
 
 type Task = {
   id: string
@@ -17,159 +18,186 @@ type Task = {
   updatedAt: string
 }
 
-const priorityColors: Record<string, string> = {
-  low: "bg-foreground-quaternary",
-  medium: "bg-warning",
-  high: "bg-danger",
+const priorityBorder: Record<string, string> = {
+  low: "border-l-foreground-quaternary",
+  medium: "border-l-warning",
+  high: "border-l-danger",
 }
 
-function TimelineItem({ task, isLast }: { task: Task; isLast: boolean }) {
-  const [isPending, startTransition] = useTransition()
-  const isDone = task.status === "done"
+export function TimelineView({ tasks }: { tasks: Task[] }) {
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-  const isOverdue = task.dueDate && task.dueDate < todayStr && !isDone
-  const isDueToday = task.dueDate === todayStr && !isDone
+
+  // Build date buckets for the next 14 days + overdue + no date
+  const dates: { key: string; label: string; isToday: boolean; isPast: boolean }[] = []
+
+  // Overdue bucket
+  const overdueTasks = tasks.filter(
+    (t) => t.dueDate && t.dueDate < todayStr && t.status !== "done"
+  )
+
+  // Next 14 days
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(now)
+    d.setDate(d.getDate() + i)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+    dates.push({ key, label, isToday: i === 0, isPast: false })
+  }
+
+  const noDueTasks = tasks.filter((t) => !t.dueDate && t.status !== "done")
+  const doneTasks = tasks.filter((t) => t.status === "done")
 
   return (
-    <div className={cn("flex gap-4", isPending && "opacity-50 pointer-events-none")}>
-      {/* Timeline line + dot */}
-      <div className="flex flex-col items-center">
-        <button
-          onClick={() => startTransition(() => toggleTask(task.id))}
-          className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 z-10 bg-background transition-all",
-            isDone
-              ? "border-success bg-success"
-              : isOverdue
-                ? "border-danger"
-                : "border-foreground-quaternary hover:border-accent"
-          )}
-        >
-          {isDone && <Check className="h-3 w-3 text-white" />}
-        </button>
-        {!isLast && (
-          <div className="w-0.5 flex-1 bg-border-light min-h-[24px]" />
-        )}
+    <div className="space-y-1">
+      {/* Overdue section */}
+      {overdueTasks.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-3 w-3 rounded-full bg-danger" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-danger">
+              Overdue ({overdueTasks.length})
+            </h3>
+            <div className="flex-1 h-px bg-danger/20" />
+          </div>
+          <div className="ml-6 space-y-1.5">
+            {overdueTasks.map((task) => (
+              <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Timeline */}
+      <div className="relative">
+        {/* Vertical line */}
+        <div className="absolute left-[5px] top-0 bottom-0 w-px bg-border" />
+
+        {dates.map((date) => {
+          const dayTasks = tasks.filter(
+            (t) => t.dueDate === date.key && t.status !== "done"
+          )
+
+          return (
+            <div key={date.key} className="relative flex gap-4 mb-1">
+              {/* Dot on timeline */}
+              <div className="relative z-10 mt-2.5">
+                <div
+                  className={cn(
+                    "h-[11px] w-[11px] rounded-full border-2",
+                    date.isToday
+                      ? "border-accent bg-accent"
+                      : dayTasks.length > 0
+                        ? "border-accent bg-background"
+                        : "border-border bg-background"
+                  )}
+                />
+              </div>
+
+              {/* Date + tasks */}
+              <div className="flex-1 pb-3">
+                <p
+                  className={cn(
+                    "text-xs font-semibold mb-1.5",
+                    date.isToday ? "text-accent" : "text-foreground-tertiary"
+                  )}
+                >
+                  {date.label}
+                </p>
+                {dayTasks.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {dayTasks.map((task) => (
+                      <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-1" />
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Content */}
-      <div className={cn("flex-1 pb-6", isLast && "pb-0")}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <span
-              className={cn(
-                "text-sm font-medium",
-                isDone && "line-through text-foreground-tertiary"
-              )}
-            >
-              {task.title}
-            </span>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div
-                className={cn("h-1.5 w-1.5 rounded-full", priorityColors[task.priority])}
-              />
-              <span className="text-[11px] text-foreground-quaternary capitalize">
-                {task.priority}
-              </span>
-              {task.dueDate && (
-                <>
-                  <span className="text-foreground-quaternary">·</span>
-                  <span
-                    className={cn(
-                      "text-[11px]",
-                      isOverdue
-                        ? "text-danger font-medium"
-                        : isDueToday
-                          ? "text-warning font-medium"
-                          : "text-foreground-quaternary"
-                    )}
-                  >
-                    {isOverdue && "Overdue — "}
-                    {isDueToday && "Today — "}
-                    {new Date(task.dueDate + "T12:00:00").toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                </>
-              )}
-            </div>
-            {task.description && (
-              <p className="mt-1 text-xs text-foreground-tertiary line-clamp-2">
-                {task.description}
+      {/* No due date */}
+      {noDueTasks.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-3 w-3 rounded-full bg-foreground-quaternary" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+              No due date ({noDueTasks.length})
+            </h3>
+            <div className="flex-1 h-px bg-border-light" />
+          </div>
+          <div className="ml-6 space-y-1.5">
+            {noDueTasks.map((task) => (
+              <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Done */}
+      {doneTasks.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-3 w-3 rounded-full bg-success" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-success">
+              Completed ({doneTasks.length})
+            </h3>
+            <div className="flex-1 h-px bg-success/20" />
+          </div>
+          <div className="ml-6 space-y-1.5">
+            {doneTasks.slice(0, 5).map((task) => (
+              <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
+            ))}
+            {doneTasks.length > 5 && (
+              <p className="text-xs text-foreground-quaternary ml-1">
+                +{doneTasks.length - 5} more
               </p>
             )}
           </div>
-          <button
-            onClick={() => startTransition(() => deleteTask(task.id))}
-            className="shrink-0 rounded p-1 text-foreground-quaternary transition-all hover:bg-danger/10 hover:text-danger"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
         </div>
-      </div>
+      )}
+
+      {/* Modal */}
+      {editingTask && (
+        <TaskModal task={editingTask} onClose={() => setEditingTask(null)} />
+      )}
     </div>
   )
 }
 
-export function TimelineView({ tasks }: { tasks: Task[] }) {
-  // Group by date sections
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-
-  const overdue = tasks.filter(
-    (t) => t.dueDate && t.dueDate < todayStr && t.status !== "done"
-  )
-  const dueToday = tasks.filter(
-    (t) => t.dueDate === todayStr && t.status !== "done"
-  )
-  const upcoming = tasks.filter(
-    (t) => t.dueDate && t.dueDate > todayStr && t.status !== "done"
-  )
-  const noDue = tasks.filter((t) => !t.dueDate && t.status !== "done")
-  const done = tasks.filter((t) => t.status === "done")
-
-  const sections = [
-    { label: "Overdue", tasks: overdue, color: "text-danger" },
-    { label: "Today", tasks: dueToday, color: "text-warning" },
-    { label: "Upcoming", tasks: upcoming, color: "text-accent" },
-    { label: "No Due Date", tasks: noDue, color: "text-foreground-tertiary" },
-    { label: "Completed", tasks: done, color: "text-success" },
-  ].filter((s) => s.tasks.length > 0)
-
-  if (sections.length === 0) {
-    return (
-      <p className="py-12 text-center text-sm text-foreground-tertiary">
-        No tasks yet. Add one above.
-      </p>
-    )
-  }
+function TimelineCard({ task, onClick }: { task: Task; onClick: () => void }) {
+  const [isPending, startTransition] = useTransition()
+  const isDone = task.status === "done"
 
   return (
-    <div className="space-y-6">
-      {sections.map((section) => (
-        <div key={section.label}>
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className={cn("text-xs font-semibold uppercase tracking-wider", section.color)}>
-              {section.label}
-            </h3>
-            <span className="text-[11px] text-foreground-quaternary">
-              {section.tasks.length}
-            </span>
-          </div>
-          <div>
-            {section.tasks.map((task, i) => (
-              <TimelineItem
-                key={task.id}
-                task={task}
-                isLast={i === section.tasks.length - 1}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-[--radius-md] border border-border-light/60 bg-surface px-3 py-2.5 border-l-[3px] cursor-pointer transition-all duration-200 hover:shadow-sm hover:border-accent/20",
+        priorityBorder[task.priority],
+        isPending && "opacity-50"
+      )}
+      onClick={onClick}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          startTransition(() => toggleTask(task.id))
+        }}
+        className={cn(
+          "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+          isDone ? "border-success bg-success" : "border-foreground-quaternary hover:border-accent"
+        )}
+      >
+        {isDone && <Check className="h-2.5 w-2.5 text-white" />}
+      </button>
+      <span className={cn("text-sm font-medium flex-1 truncate", isDone && "line-through text-foreground-tertiary")}>
+        {task.title}
+      </span>
     </div>
   )
 }

@@ -65,6 +65,12 @@ sqlite.exec(`
     conversation_id TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS local_calendars (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS memories (
     id TEXT PRIMARY KEY,
     category TEXT NOT NULL DEFAULT 'fact',
