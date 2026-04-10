@@ -25,6 +25,7 @@ interface EventFormProps {
     color: string | null
     source?: string
     calendarId?: string
+    recurrence?: string | null
   }
   defaultDate?: string
   onClose: () => void
@@ -232,6 +233,25 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
             />
             <span className="text-sm text-foreground-secondary">All day</span>
           </label>
+
+          {/* Recurrence */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-foreground-quaternary">
+              Repeat
+            </label>
+            <select
+              name="recurrence"
+              defaultValue={event?.recurrence || "none"}
+              className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent"
+            >
+              <option value="none">Does not repeat</option>
+              <option value="daily">Every day</option>
+              <option value="weekdays">Every weekday (Mon–Fri)</option>
+              <option value="weekly">Every week</option>
+              <option value="biweekly">Every 2 weeks</option>
+              <option value="monthly">Every month</option>
+            </select>
+          </div>
 
           {/* Color */}
           <div className="space-y-2">

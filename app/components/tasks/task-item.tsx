@@ -77,9 +77,24 @@ export function TaskItem({ task }: TaskItemProps) {
             {task.description}
           </p>
         )}
-        {task.dueDate && (
-          <p className="mt-1.5 text-xs text-foreground-quaternary">
-            Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+        {task.dueDate && !isDone && (() => {
+          const today = new Date()
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+          const isOverdue = task.dueDate < todayStr
+          const isDueToday = task.dueDate === todayStr
+          return (
+            <p className={cn(
+              "mt-1.5 text-xs",
+              isOverdue ? "text-danger font-medium" : isDueToday ? "text-warning font-medium" : "text-foreground-quaternary"
+            )}>
+              {isOverdue ? "Overdue — " : isDueToday ? "Due today — " : "Due "}
+              {new Date(task.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </p>
+          )
+        })()}
+        {task.dueDate && isDone && (
+          <p className="mt-1.5 text-xs text-foreground-quaternary line-through">
+            Due {new Date(task.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </p>
         )}
       </div>

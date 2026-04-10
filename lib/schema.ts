@@ -38,6 +38,7 @@ export const calendarEvents = sqliteTable("calendar_events", {
   color: text("color"),
   googleEventId: text("google_event_id"),
   googleCalendarId: text("google_calendar_id"),
+  recurrence: text("recurrence"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })

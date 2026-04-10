@@ -96,5 +96,8 @@ try {
 try {
   sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN google_calendar_id TEXT`)
 } catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN recurrence TEXT`)
+} catch { /* column already exists */ }
 
 export const db = drizzle(sqlite, { schema })

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic"
 import { Card } from "@/app/components/ui/card"
 import { WeatherWidget } from "@/app/components/dashboard/weather-widget"
 import { EmailWidget } from "@/app/components/dashboard/email-widget"
+import { DailyBriefing } from "@/app/components/dashboard/daily-briefing"
 import { getTasks } from "@/lib/actions/tasks"
 import { getNotes } from "@/lib/actions/notes"
 import { getTodaysEvents } from "@/lib/actions/calendar"
@@ -95,6 +96,9 @@ export default async function DashboardPage() {
           Here&apos;s your day at a glance.
         </p>
       </div>
+
+      {/* Daily Briefing */}
+      <DailyBriefing events={todaysEvents} tasks={tasks} />
 
       {/* Widget Grid */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">

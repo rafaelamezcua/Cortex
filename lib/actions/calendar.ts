@@ -47,24 +47,97 @@ export async function createEvent(formData: FormData) {
     }
   }
 
-  // Always save locally too
-  await db.insert(calendarEvents).values({
-    id: nanoid(),
-    title: title.trim(),
-    description,
-    notes,
+  const recurrence = (formData.get("recurrence") as string) || "none"
+
+  // Generate event instances
+  const instances = generateRecurrenceInstances(
     startTime,
-    endTime: endTime || startTime,
-    allDay,
-    color,
-    googleEventId,
-    googleCalendarId,
-    createdAt: now,
-    updatedAt: now,
-  })
+    endTime || startTime,
+    recurrence
+  )
+
+  for (const instance of instances) {
+    await db.insert(calendarEvents).values({
+      id: nanoid(),
+      title: title.trim(),
+      description,
+      notes,
+      startTime: instance.start,
+      endTime: instance.end,
+      allDay,
+      color,
+      googleEventId,
+      googleCalendarId,
+      recurrence: recurrence !== "none" ? recurrence : null,
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
 
   revalidatePath("/calendar")
   revalidatePath("/")
+}
+
+function generateRecurrenceInstances(
+  startTime: string,
+  endTime: string,
+  recurrence: string
+): { start: string; end: string }[] {
+  if (recurrence === "none") {
+    return [{ start: startTime, end: endTime }]
+  }
+
+  const instances: { start: string; end: string }[] = []
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  const durationMs = end.getTime() - start.getTime()
+
+  // Generate for 3 months
+  const limit = new Date(start)
+  limit.setMonth(limit.getMonth() + 3)
+
+  const cursor = new Date(start)
+
+  while (cursor <= limit) {
+    const instanceEnd = new Date(cursor.getTime() + durationMs)
+    instances.push({
+      start: formatLocalDateTime(cursor),
+      end: formatLocalDateTime(instanceEnd),
+    })
+
+    switch (recurrence) {
+      case "daily":
+        cursor.setDate(cursor.getDate() + 1)
+        break
+      case "weekdays":
+        do {
+          cursor.setDate(cursor.getDate() + 1)
+        } while (cursor.getDay() === 0 || cursor.getDay() === 6)
+        break
+      case "weekly":
+        cursor.setDate(cursor.getDate() + 7)
+        break
+      case "biweekly":
+        cursor.setDate(cursor.getDate() + 14)
+        break
+      case "monthly":
+        cursor.setMonth(cursor.getMonth() + 1)
+        break
+      default:
+        return instances
+    }
+  }
+
+  return instances
+}
+
+function formatLocalDateTime(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  const h = String(date.getHours()).padStart(2, "0")
+  const min = String(date.getMinutes()).padStart(2, "0")
+  return `${y}-${m}-${d}T${h}:${min}`
 }
 
 export async function updateEvent(id: string, formData: FormData) {
