@@ -1,9 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { toggleTask, deleteTask } from "@/lib/actions/tasks"
-import { Check, Trash2 } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { TaskModal } from "./task-modal"
 
 type Task = {
@@ -18,10 +16,16 @@ type Task = {
   updatedAt: string
 }
 
-const priorityBorder: Record<string, string> = {
-  low: "border-l-foreground-quaternary",
-  medium: "border-l-warning",
-  high: "border-l-danger",
+const priorityColors: Record<string, string> = {
+  low: "#aeaeb2",
+  medium: "#ff9f0a",
+  high: "#ff453a",
+}
+
+const statusColors: Record<string, string> = {
+  todo: "var(--foreground-quaternary)",
+  in_progress: "var(--accent)",
+  done: "var(--success)",
 }
 
 export function TimelineView({ tasks }: { tasks: Task[] }) {
@@ -30,174 +34,175 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
 
-  // Build date buckets for the next 14 days + overdue + no date
-  const dates: { key: string; label: string; isToday: boolean; isPast: boolean }[] = []
+  // Timeline spans from 7 days ago to 21 days ahead (28 days total)
+  const timelineStart = new Date(now)
+  timelineStart.setDate(timelineStart.getDate() - 7)
+  const timelineEnd = new Date(now)
+  timelineEnd.setDate(timelineEnd.getDate() + 21)
 
-  // Overdue bucket
-  const overdueTasks = tasks.filter(
-    (t) => t.dueDate && t.dueDate < todayStr && t.status !== "done"
-  )
+  const totalDays = 28
+  const dayWidth = 100 / totalDays
 
-  // Next 14 days
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(now)
+  // Generate day labels
+  const days: { date: string; label: string; isToday: boolean; isWeekend: boolean }[] = []
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(timelineStart)
     d.setDate(d.getDate() + i)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-    const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
-    dates.push({ key, label, isToday: i === 0, isPast: false })
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    days.push({
+      date: dateStr,
+      label: d.getDate().toString(),
+      isToday: dateStr === todayStr,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
+    })
   }
 
-  const noDueTasks = tasks.filter((t) => !t.dueDate && t.status !== "done")
-  const doneTasks = tasks.filter((t) => t.status === "done")
+  // Week labels
+  const weeks: { label: string; span: number; startIdx: number }[] = []
+  let currentWeek = ""
+  for (let i = 0; i < days.length; i++) {
+    const d = new Date(days[i].date + "T12:00:00")
+    const weekLabel = d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    const weekKey = `${d.getFullYear()}-W${Math.ceil(d.getDate() / 7)}-${d.getMonth()}`
+    if (weekKey !== currentWeek) {
+      weeks.push({ label: weekLabel, span: 1, startIdx: i })
+      currentWeek = weekKey
+    } else {
+      weeks[weeks.length - 1].span++
+    }
+  }
+
+  // Filter tasks with dates for the bar chart
+  const tasksWithDates = tasks.filter((t) => t.dueDate || t.createdAt)
+  const activeTasks = tasksWithDates.filter((t) => t.status !== "done")
+  const doneTasks = tasksWithDates.filter((t) => t.status === "done")
+
+  function getBarPosition(task: Task) {
+    const created = new Date(task.createdAt)
+    const due = task.dueDate ? new Date(task.dueDate + "T23:59:59") : new Date(created.getTime() + 86400000)
+
+    const startOffset = Math.max(
+      0,
+      (created.getTime() - timelineStart.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    const endOffset = Math.min(
+      totalDays,
+      (due.getTime() - timelineStart.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    const left = (startOffset / totalDays) * 100
+    const width = Math.max(((endOffset - startOffset) / totalDays) * 100, dayWidth)
+
+    return { left: `${left}%`, width: `${width}%` }
+  }
+
+  const allDisplayTasks = [...activeTasks, ...doneTasks].slice(0, 20)
+
+  if (allDisplayTasks.length === 0) {
+    return (
+      <p className="py-12 text-center text-sm text-foreground-tertiary">
+        No tasks with dates to display. Add due dates to see the timeline.
+      </p>
+    )
+  }
 
   return (
-    <div className="space-y-1">
-      {/* Overdue section */}
-      {overdueTasks.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-3 w-3 rounded-full bg-danger" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-danger">
-              Overdue ({overdueTasks.length})
-            </h3>
-            <div className="flex-1 h-px bg-danger/20" />
-          </div>
-          <div className="ml-6 space-y-1.5">
-            {overdueTasks.map((task) => (
-              <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Timeline */}
-      <div className="relative">
-        {/* Vertical line */}
-        <div className="absolute left-[5px] top-0 bottom-0 w-px bg-border" />
-
-        {dates.map((date) => {
-          const dayTasks = tasks.filter(
-            (t) => t.dueDate === date.key && t.status !== "done"
-          )
-
-          return (
-            <div key={date.key} className="relative flex gap-4 mb-1">
-              {/* Dot on timeline */}
-              <div className="relative z-10 mt-2.5">
+    <>
+      <div className="rounded-[--radius-xl] border border-border-light/60 bg-surface shadow-sm overflow-x-auto">
+        {/* Header — day columns */}
+        <div className="min-w-[800px]">
+          {/* Day numbers */}
+          <div className="flex border-b border-border-light/40">
+            <div className="w-40 shrink-0 border-r border-border-light/40 px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+                Task
+              </span>
+            </div>
+            <div className="flex-1 flex">
+              {days.map((day, i) => (
                 <div
+                  key={day.date}
                   className={cn(
-                    "h-[11px] w-[11px] rounded-full border-2",
-                    date.isToday
-                      ? "border-accent bg-accent"
-                      : dayTasks.length > 0
-                        ? "border-accent bg-background"
-                        : "border-border bg-background"
-                  )}
-                />
-              </div>
-
-              {/* Date + tasks */}
-              <div className="flex-1 pb-3">
-                <p
-                  className={cn(
-                    "text-xs font-semibold mb-1.5",
-                    date.isToday ? "text-accent" : "text-foreground-tertiary"
+                    "flex-1 text-center py-2 text-[10px] border-r border-border-light/20 last:border-r-0",
+                    day.isToday && "bg-accent/10 font-bold text-accent",
+                    day.isWeekend && !day.isToday && "bg-background-secondary/50",
+                    !day.isToday && !day.isWeekend && "text-foreground-quaternary"
                   )}
                 >
-                  {date.label}
-                </p>
-                {dayTasks.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {dayTasks.map((task) => (
-                      <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-1" />
-                )}
-              </div>
+                  {day.label}
+                </div>
+              ))}
             </div>
-          )
-        })}
+          </div>
+
+          {/* Task rows with bars */}
+          {allDisplayTasks.map((task) => {
+            const pos = getBarPosition(task)
+            const isDone = task.status === "done"
+
+            return (
+              <div
+                key={task.id}
+                className="flex border-b border-border-light/20 last:border-b-0 hover:bg-surface-hover/50 transition-colors cursor-pointer"
+                onClick={() => setEditingTask(task)}
+              >
+                {/* Task name */}
+                <div className="w-40 shrink-0 border-r border-border-light/40 px-3 py-3 flex items-center gap-2">
+                  <div
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ backgroundColor: priorityColors[task.priority] }}
+                  />
+                  <span
+                    className={cn(
+                      "text-xs font-medium truncate",
+                      isDone && "line-through text-foreground-tertiary"
+                    )}
+                  >
+                    {task.title}
+                  </span>
+                </div>
+
+                {/* Bar area */}
+                <div className="flex-1 relative py-2">
+                  {/* Today indicator */}
+                  {days.map((day) =>
+                    day.isToday ? (
+                      <div
+                        key="today-line"
+                        className="absolute top-0 bottom-0 w-px bg-accent z-10"
+                        style={{
+                          left: `${((days.indexOf(day) + 0.5) / totalDays) * 100}%`,
+                        }}
+                      />
+                    ) : null
+                  )}
+
+                  {/* Task bar */}
+                  <div
+                    className={cn(
+                      "absolute top-2.5 h-5 rounded-full transition-all duration-200 hover:opacity-80",
+                      isDone && "opacity-50"
+                    )}
+                    style={{
+                      left: pos.left,
+                      width: pos.width,
+                      backgroundColor: statusColors[task.status] || "var(--accent)",
+                    }}
+                  >
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-medium text-white truncate px-2">
+                      {task.title}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* No due date */}
-      {noDueTasks.length > 0 && (
-        <div className="mt-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-3 w-3 rounded-full bg-foreground-quaternary" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
-              No due date ({noDueTasks.length})
-            </h3>
-            <div className="flex-1 h-px bg-border-light" />
-          </div>
-          <div className="ml-6 space-y-1.5">
-            {noDueTasks.map((task) => (
-              <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Done */}
-      {doneTasks.length > 0 && (
-        <div className="mt-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-3 w-3 rounded-full bg-success" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-success">
-              Completed ({doneTasks.length})
-            </h3>
-            <div className="flex-1 h-px bg-success/20" />
-          </div>
-          <div className="ml-6 space-y-1.5">
-            {doneTasks.slice(0, 5).map((task) => (
-              <TimelineCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
-            ))}
-            {doneTasks.length > 5 && (
-              <p className="text-xs text-foreground-quaternary ml-1">
-                +{doneTasks.length - 5} more
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal */}
       {editingTask && (
         <TaskModal task={editingTask} onClose={() => setEditingTask(null)} />
       )}
-    </div>
-  )
-}
-
-function TimelineCard({ task, onClick }: { task: Task; onClick: () => void }) {
-  const [isPending, startTransition] = useTransition()
-  const isDone = task.status === "done"
-
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-[--radius-md] border border-border-light/60 bg-surface px-3 py-2.5 border-l-[3px] cursor-pointer transition-all duration-200 hover:shadow-sm hover:border-accent/20",
-        priorityBorder[task.priority],
-        isPending && "opacity-50"
-      )}
-      onClick={onClick}
-    >
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          startTransition(() => toggleTask(task.id))
-        }}
-        className={cn(
-          "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-          isDone ? "border-success bg-success" : "border-foreground-quaternary hover:border-accent"
-        )}
-      >
-        {isDone && <Check className="h-2.5 w-2.5 text-white" />}
-      </button>
-      <span className={cn("text-sm font-medium flex-1 truncate", isDone && "line-through text-foreground-tertiary")}>
-        {task.title}
-      </span>
-    </div>
+    </>
   )
 }
