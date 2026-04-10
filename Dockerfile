@@ -14,31 +14,29 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV DATABASE_PATH=/app/data/luma.db
+RUN mkdir -p /app/data
 RUN npm run build
 
 # --- Production ---
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Install better-sqlite3 native dependency
+RUN apk add --no-cache libstdc++
+
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+ENV DATABASE_PATH=/app/data/luma.db
 
 # Copy standalone build
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Create data directory for SQLite with correct permissions
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
-
-# SQLite database will live in /app/data (persistent volume)
-ENV DATABASE_PATH=/app/data/luma.db
-
-USER nextjs
+# Create data directory writable by anyone (volume will mount here)
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 EXPOSE 3000
 
