@@ -65,6 +65,13 @@ sqlite.exec(`
     conversation_id TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS memories (
+    id TEXT PRIMARY KEY,
+    category TEXT NOT NULL DEFAULT 'fact',
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS oauth_tokens (
     id TEXT PRIMARY KEY,
     provider TEXT NOT NULL,

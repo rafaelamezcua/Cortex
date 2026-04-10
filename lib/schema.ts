@@ -57,6 +57,16 @@ export const chatMessages = sqliteTable("chat_messages", {
   createdAt: text("created_at").notNull(),
 })
 
+export const memories = sqliteTable("memories", {
+  id: text("id").primaryKey(),
+  category: text("category", {
+    enum: ["preference", "fact", "style", "context", "feedback"],
+  }).notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
 export const oauthTokens = sqliteTable("oauth_tokens", {
   id: text("id").primaryKey(),
   provider: text("provider").notNull(),

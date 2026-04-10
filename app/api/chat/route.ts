@@ -25,10 +25,11 @@ export async function POST(request: Request) {
   const modelMessages = await convertToModelMessages(messages)
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: anthropic("claude-haiku-4-5-20251001"),
     system: systemPrompt,
     messages: modelMessages,
     tools: aiTools,
+    maxOutputTokens: 1024,
     stopWhen: stepCountIs(5),
     onFinish: async ({ text }) => {
       if (conversationId && text) {

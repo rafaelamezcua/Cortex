@@ -1,5 +1,5 @@
 import { db } from "@/lib/db"
-import { tasks, notes, calendarEvents } from "@/lib/schema"
+import { tasks, notes, calendarEvents, memories } from "@/lib/schema"
 import { ne, and, gte, lte } from "drizzle-orm"
 import { getGoogleCalendarEvents } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
@@ -12,6 +12,7 @@ export async function getSystemPrompt(): Promise<string> {
     .all()
 
   const recentNotes = await db.select().from(notes).all()
+  const allMemories = await db.select().from(memories).all()
 
   const today = new Date()
   const dateStr = today.toLocaleDateString("en-US", {
@@ -67,6 +68,25 @@ export async function getSystemPrompt(): Promise<string> {
     }
   }
 
+  // Format memories by category
+  const memoryByCategory = new Map<string, string[]>()
+  for (const m of allMemories) {
+    if (!memoryByCategory.has(m.category)) memoryByCategory.set(m.category, [])
+    memoryByCategory.get(m.category)!.push(m.content)
+  }
+
+  const memorySection = allMemories.length > 0
+    ? `YOUR MEMORIES ABOUT RAMEZ:
+${Array.from(memoryByCategory.entries())
+  .map(
+    ([cat, items]) =>
+      `[${cat}]\n${items.map((item) => `- ${item}`).join("\n")}`
+  )
+  .join("\n\n")}
+
+Use these memories to personalize every response. They represent things you've learned across conversations.`
+    : "You haven't saved any memories about Ramez yet. Start learning!"
+
   return `You are Luma — Ramez's personal assistant. Think of yourself as a thoughtful, sharp chief of staff who genuinely cares about helping Ramez stay organized and ahead of things.
 
 Today is ${dateStr}.
@@ -79,6 +99,21 @@ PERSONALITY & TONE:
 - Match Ramez's energy — if he's casual, be casual. If he's focused, get straight to business.
 - You're not a search engine. You're a trusted advisor. Share opinions and recommendations when relevant.
 - When confirming actions (task created, event scheduled), be brief and natural: "Done, added that for tomorrow at 3" — not a formatted receipt.
+
+${memorySection}
+
+LEARNING — THIS IS IMPORTANT:
+You have memory tools. Use them proactively to build up knowledge about Ramez over time:
+
+- When he tells you something personal (name preferences, work details, interests), save it as a "fact"
+- When he corrects your tone or approach, save it as "feedback" so you don't repeat the mistake
+- When he mentions how he likes things done, save it as "preference"
+- When he tells you about ongoing projects or goals, save it as "context"
+- When he says something about how you should communicate, save it as "style"
+
+Don't ask permission to save memories. Just do it quietly when you learn something worth remembering. Don't announce "I'll remember that" every time — just save it and move on naturally. Only mention it if it's a significant correction or if he asks.
+
+If Ramez asks you to forget something, use the forgetMemory tool.
 
 CONTEXT — Ramez's day right now:
 
@@ -121,6 +156,7 @@ CAPABILITIES:
 - Create, edit, and delete calendar events (including on specific Google Calendars)
 - List available Google Calendars
 - Check schedule for any date range
+- Save, update, recall, and forget memories about Ramez
 - Answer questions, brainstorm, help plan
 
 Use your tools proactively when Ramez asks to do things — don't just describe what he could do, actually do it.`

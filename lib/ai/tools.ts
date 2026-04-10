@@ -1,7 +1,7 @@
 import { tool } from "ai"
 import { z } from "zod"
 import { db } from "@/lib/db"
-import { tasks, calendarEvents } from "@/lib/schema"
+import { tasks, calendarEvents, memories } from "@/lib/schema"
 import { eq, ne, and, gte, lte } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import {
@@ -416,6 +416,141 @@ export const aiTools = {
           primary: c.primary,
         })),
         count: calendars.length,
+      }
+    },
+  }),
+
+  // --- Memory tools ---
+
+  saveMemory: tool({
+    description: `Save something to your long-term memory about Ramez. Use this proactively when you learn something worth remembering for future conversations. Categories:
+- "preference": How Ramez likes things done (communication style, work habits, preferences)
+- "fact": Personal facts (name, role, interests, relationships, important dates)
+- "style": How Ramez wants you to communicate (tone, format, length)
+- "context": Ongoing projects, goals, situations
+- "feedback": When Ramez corrects you or says what he likes/dislikes about your responses`,
+    inputSchema: z.object({
+      category: z
+        .enum(["preference", "fact", "style", "context", "feedback"])
+        .describe("Category of the memory"),
+      content: z
+        .string()
+        .describe(
+          "What to remember. Be specific and concise. Write it as a statement of fact, not a description of the conversation."
+        ),
+    }),
+    execute: async ({ category, content }) => {
+      const now = new Date().toISOString()
+
+      // Check for duplicates — don't save the same thing twice
+      const existing = await db.select().from(memories).all()
+      const isDuplicate = existing.some(
+        (m) =>
+          m.content.toLowerCase().includes(content.toLowerCase()) ||
+          content.toLowerCase().includes(m.content.toLowerCase())
+      )
+
+      if (isDuplicate) {
+        return { success: true, message: "Already remembered something similar." }
+      }
+
+      await db.insert(memories).values({
+        id: nanoid(),
+        category,
+        content,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      return { success: true, message: `Remembered: ${content}` }
+    },
+  }),
+
+  updateMemory: tool({
+    description:
+      "Update an existing memory when you learn new or corrected information. Searches by content similarity.",
+    inputSchema: z.object({
+      search: z
+        .string()
+        .describe("Part of the existing memory content to find"),
+      newContent: z
+        .string()
+        .describe("The updated memory content"),
+    }),
+    execute: async ({ search, newContent }) => {
+      const existing = await db.select().from(memories).all()
+      const match = existing.find((m) =>
+        m.content.toLowerCase().includes(search.toLowerCase())
+      )
+
+      if (!match) {
+        return { success: false, message: `No memory found matching "${search}".` }
+      }
+
+      await db
+        .update(memories)
+        .set({ content: newContent, updatedAt: new Date().toISOString() })
+        .where(eq(memories.id, match.id))
+
+      return { success: true, message: `Updated memory.` }
+    },
+  }),
+
+  forgetMemory: tool({
+    description: "Remove a memory when Ramez asks you to forget something.",
+    inputSchema: z.object({
+      search: z
+        .string()
+        .describe("Part of the memory content to find and remove"),
+    }),
+    execute: async ({ search }) => {
+      const existing = await db.select().from(memories).all()
+      const match = existing.find((m) =>
+        m.content.toLowerCase().includes(search.toLowerCase())
+      )
+
+      if (!match) {
+        return { success: false, message: `No memory found matching "${search}".` }
+      }
+
+      await db.delete(memories).where(eq(memories.id, match.id))
+      return { success: true, message: `Forgot that.` }
+    },
+  }),
+
+  recallMemories: tool({
+    description:
+      "Search your memories about Ramez. Use this when you need to recall something you've learned.",
+    inputSchema: z.object({
+      query: z
+        .string()
+        .optional()
+        .describe("Search term to filter memories. Omit to get all memories."),
+      category: z
+        .enum(["preference", "fact", "style", "context", "feedback"])
+        .optional()
+        .describe("Filter by category"),
+    }),
+    execute: async ({ query, category }) => {
+      let result = await db.select().from(memories).all()
+
+      if (category) {
+        result = result.filter((m) => m.category === category)
+      }
+
+      if (query) {
+        result = result.filter((m) =>
+          m.content.toLowerCase().includes(query.toLowerCase())
+        )
+      }
+
+      return {
+        memories: result.map((m) => ({
+          category: m.category,
+          content: m.content,
+          savedAt: m.createdAt,
+        })),
+        count: result.length,
       }
     },
   }),
