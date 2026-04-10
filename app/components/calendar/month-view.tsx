@@ -88,9 +88,9 @@ export function MonthView({
                 {date.getDate()}
               </span>
               <div className="mt-1 space-y-0.5">
-                {dayEvents.slice(0, 3).map((event) => (
+                {dayEvents.slice(0, 3).map((event, idx) => (
                   <div
-                    key={event.id}
+                    key={`${event.id}-${idx}`}
                     className="truncate rounded px-1 py-0.5 text-xs text-white"
                     style={{ backgroundColor: event.color || "#0071e3" }}
                   >
