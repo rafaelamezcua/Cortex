@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2000 2000">
+  <!-- Generator: Adobe Illustrator 30.3.0, SVG Export Plug-In . SVG Version: 2.1.3 Build 182)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#radial-gradient);
+      }
+
+      .st0, .st1, .st2, .st3, .st4, .st5 {
+        stroke: #fff;
+        stroke-miterlimit: 10;
+      }
+
+      .st0, .st1, .st2, .st3, .st5 {
+        stroke-width: 5.86px;
+      }
+
+      .st1 {
+        fill: url(#radial-gradient1);
+      }
+
+      .st2 {
+        fill: url(#radial-gradient4);
+      }
+
+      .st3 {
+        fill: url(#radial-gradient2);
+      }
+
+      .st4 {
+        fill: url(#radial-gradient5);
+        stroke-width: 3.08px;
+      }
+
+      .st5 {
+        fill: url(#radial-gradient3);
+      }
+    </style>
+    <radialGradient id="radial-gradient" cx="995.46" cy="433.05" fx="995.46" fy="433.05" r="262.41" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6f6ff"/>
+      <stop offset=".24" stop-color="#e0e1ff"/>
+      <stop offset=".75" stop-color="#a9aeff"/>
+      <stop offset="1" stop-color="#8b92ff"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient1" cx="1006.41" cy="584.63" fx="1006.41" fy="584.63" r="262.41" gradientTransform="translate(2008.06 2144) rotate(179.57)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6f6ff"/>
+      <stop offset=".24" stop-color="#e0e1ff"/>
+      <stop offset=".75" stop-color="#a9aeff"/>
+      <stop offset="1" stop-color="#8b92ff"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient2" cx="1564.7" cy="1002.45" fx="1564.7" fy="1002.45" r="262.45" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6f6ff"/>
+      <stop offset=".24" stop-color="#e0e1ff"/>
+      <stop offset=".75" stop-color="#a9aeff"/>
+      <stop offset="1" stop-color="#8b92ff"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient3" cx="820.3" cy="365.64" fx="820.3" fy="365.64" r="262.41" gradientTransform="translate(82.09 1831.94) rotate(-90.87)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6f6ff"/>
+      <stop offset=".24" stop-color="#e0e1ff"/>
+      <stop offset=".75" stop-color="#a9aeff"/>
+      <stop offset="1" stop-color="#8b92ff"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient4" cx="995.46" cy="1002.45" fx="995.46" fy="1002.45" r="188.9" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b92ff"/>
+      <stop offset=".49" stop-color="#f6f6ff"/>
+      <stop offset=".99" stop-color="#e0e2ff"/>
+      <stop offset="1" stop-color="#e0e2ff"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient5" cx="1000" cy="1000" fx="1000" fy="1000" r="47.26" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".09" stop-color="#ffecd8"/>
+      <stop offset=".21" stop-color="#ffd4a7"/>
+      <stop offset=".33" stop-color="#ffc07d"/>
+      <stop offset=".46" stop-color="#ffb05a"/>
+      <stop offset=".59" stop-color="#ffa340"/>
+      <stop offset=".72" stop-color="#ff9a2d"/>
+      <stop offset=".86" stop-color="#ff9421"/>
+      <stop offset="1" stop-color="#ff931e"/>
+    </radialGradient>
+  </defs>
+  <path class="st0" d="M995.46,190.1h0c.01,200.45,106.95,385.66,280.53,485.9h0s0,0,0,0c-173.6-100.21-387.47-100.21-561.06,0h0s0,0,0,0c173.59-100.23,280.52-285.45,280.53-485.9h0Z"/>
+  <path class="st1" d="M999.11,1809.9h0c-1.52-200.44-109.84-384.85-284.18-483.77h0s0,0,0,0c174.35,98.9,388.21,97.3,561.05-4.22h0s0,0,0,0c-172.83,101.54-278.37,287.55-276.87,487.99h0Z"/>
+  <path class="st3" d="M1807.72,1002.17h0c-200.45.13-385.6,107.17-485.73,280.81h0s0,0,0,0c100.11-173.66,99.99-387.53-.32-561.06h0s0,0,0,0c100.33,173.53,285.61,280.36,486.06,280.25h0Z"/>
+  <path class="st5" d="M192.28,1009.86h0c200.42-3.07,383.99-112.81,481.57-287.9h0s0,0,0,0c-97.56,175.1-94.3,388.95,8.55,561h0s0,0,0,0c-102.87-172.04-289.69-276.14-490.12-273.1h0Z"/>
+  <circle class="st2" cx="995.46" cy="1002.45" r="188.9"/>
+  <circle class="st4" cx="1000" cy="1000" r="47.26"/>
+</svg>

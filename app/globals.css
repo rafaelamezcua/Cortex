@@ -160,3 +160,18 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Luma thinking dance animation */
+@keyframes luma-dance {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  15% { transform: rotate(-12deg) scale(1.05); }
+  30% { transform: rotate(10deg) scale(0.95); }
+  45% { transform: rotate(-8deg) scale(1.08); }
+  60% { transform: rotate(6deg) scale(1); }
+  75% { transform: rotate(-4deg) scale(1.03); }
+  90% { transform: rotate(2deg) scale(1); }
+}
+
+.animate-luma-dance {
+  animation: luma-dance 1.5s ease-in-out infinite;
+}
