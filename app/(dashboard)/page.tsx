@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { Card } from "@/app/components/ui/card"
 import { WeatherWidget } from "@/app/components/dashboard/weather-widget"
 import { EmailWidget } from "@/app/components/dashboard/email-widget"
