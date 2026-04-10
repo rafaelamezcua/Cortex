@@ -3,7 +3,6 @@
 import { formatEventTime } from "@/lib/calendar-utils"
 import { Clock, FileText, Pencil, Trash2, X, Upload, Check } from "lucide-react"
 import { Button } from "@/app/components/ui/button"
-import { deleteEvent } from "@/lib/actions/calendar"
 import { useState, useTransition, useEffect } from "react"
 
 type CalendarEvent = {
@@ -228,8 +227,16 @@ export function EventPreview({ event, onClose, onEdit }: EventPreviewProps) {
               size="sm"
               disabled={isPending}
               onClick={() => {
+                if (!confirm("Delete this event?")) return
                 startTransition(async () => {
-                  await deleteEvent(event.id)
+                  await fetch("/api/calendar/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      eventId: event.id,
+                      calendarId: event.calendarId,
+                    }),
+                  })
                   onClose()
                 })
               }}
