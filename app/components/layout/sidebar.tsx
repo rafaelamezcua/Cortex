@@ -15,6 +15,8 @@ import {
   X,
   Flame,
   BookOpen,
+  FolderKanban,
+  Timer,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -28,8 +30,9 @@ const navItems = [
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/notes", label: "Notes", icon: FileText },
+  { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/habits", label: "Habits", icon: Flame },
-  { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/focus", label: "Focus", icon: Timer },
 ]
 
 export function Sidebar() {

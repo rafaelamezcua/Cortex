@@ -100,7 +100,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold tracking-tight">
-          {greeting}, Ramez
+          {greeting}, Rafael
         </h1>
         <p className="mt-2 text-[15px] text-foreground-secondary">
           Here&apos;s your day at a glance.

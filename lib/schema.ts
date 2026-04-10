@@ -58,6 +58,39 @@ export const chatMessages = sqliteTable("chat_messages", {
   createdAt: text("created_at").notNull(),
 })
 
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").notNull(),
+  status: text("status", { enum: ["active", "paused", "completed"] })
+    .notNull()
+    .default("active"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const projectTasks = sqliteTable("project_tasks", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status", { enum: ["todo", "in_progress", "done"] })
+    .notNull()
+    .default("todo"),
+  order: integer("order").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const pomodoroSessions = sqliteTable("pomodoro_sessions", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id"),
+  projectId: text("project_id"),
+  duration: integer("duration").notNull(),
+  completedAt: text("completed_at").notNull(),
+})
+
 export const habits = sqliteTable("habits", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

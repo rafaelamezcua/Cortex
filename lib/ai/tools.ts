@@ -21,7 +21,7 @@ import {
 
 export const aiTools = {
   createTask: tool({
-    description: "Create a new task for Ramez",
+    description: "Create a new task for Rafael",
     inputSchema: z.object({
       title: z.string().describe("The task title"),
       description: z
@@ -94,7 +94,7 @@ export const aiTools = {
   }),
 
   listTasks: tool({
-    description: "List Ramez's current tasks, optionally filtered by status",
+    description: "List Rafael's current tasks, optionally filtered by status",
     inputSchema: z.object({
       status: z
         .enum(["all", "active", "done"])
@@ -508,12 +508,12 @@ export const aiTools = {
   // --- Memory tools ---
 
   saveMemory: tool({
-    description: `Save something to your long-term memory about Ramez. Use this proactively when you learn something worth remembering for future conversations. Categories:
-- "preference": How Ramez likes things done (communication style, work habits, preferences)
+    description: `Save something to your long-term memory about Rafael. Use this proactively when you learn something worth remembering for future conversations. Categories:
+- "preference": How Rafael likes things done (communication style, work habits, preferences)
 - "fact": Personal facts (name, role, interests, relationships, important dates)
-- "style": How Ramez wants you to communicate (tone, format, length)
+- "style": How Rafael wants you to communicate (tone, format, length)
 - "context": Ongoing projects, goals, situations
-- "feedback": When Ramez corrects you or says what he likes/dislikes about your responses`,
+- "feedback": When Rafael corrects you or says what he likes/dislikes about your responses`,
     inputSchema: z.object({
       category: z
         .enum(["preference", "fact", "style", "context", "feedback"])
@@ -582,7 +582,7 @@ export const aiTools = {
   }),
 
   forgetMemory: tool({
-    description: "Remove a memory when Ramez asks you to forget something.",
+    description: "Remove a memory when Rafael asks you to forget something.",
     inputSchema: z.object({
       search: z
         .string()
@@ -605,7 +605,7 @@ export const aiTools = {
 
   recallMemories: tool({
     description:
-      "Search your memories about Ramez. Use this when you need to recall something you've learned.",
+      "Search your memories about Rafael. Use this when you need to recall something you've learned.",
     inputSchema: z.object({
       query: z
         .string()
