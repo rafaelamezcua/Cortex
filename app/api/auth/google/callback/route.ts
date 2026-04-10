@@ -11,7 +11,8 @@ export async function GET(request: Request) {
 
   try {
     await handleCallback(code)
-  } catch {
+  } catch (e) {
+    console.error("Google OAuth callback error:", e)
     redirect("/?error=auth_failed")
   }
 
