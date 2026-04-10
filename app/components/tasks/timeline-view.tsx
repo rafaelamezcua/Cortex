@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState, useRef, useCallback, useTransition } from "react"
+import { useState, useRef, useTransition } from "react"
 import { TaskModal } from "./task-modal"
 import { updateTask } from "@/lib/actions/tasks"
 
@@ -31,15 +31,10 @@ const statusColors: Record<string, string> = {
 
 const TOTAL_DAYS = 28
 const PAST_DAYS = 7
+const MIN_DRAG_PX = 15 // minimum pixels before drag counts
 
 export function TimelineView({ tasks }: { tasks: Task[] }) {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [dragging, setDragging] = useState<{
-    taskId: string
-    startX: number
-    originalDueDate: string
-    type: "move" | "resize"
-  } | null>(null)
   const [, startTransition] = useTransition()
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -49,7 +44,6 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
   const timelineStart = new Date(now)
   timelineStart.setDate(timelineStart.getDate() - PAST_DAYS)
 
-  // Generate day labels
   const days: { date: string; label: string; dayName: string; isToday: boolean; isWeekend: boolean }[] = []
   for (let i = 0; i < TOTAL_DAYS; i++) {
     const d = new Date(timelineStart)
@@ -92,79 +86,69 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
     return { left: `${left}%`, width: `${width}%` }
   }
 
-  // Handle drag to change due date
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, taskId: string, currentDueDate: string, type: "move" | "resize") => {
-      e.stopPropagation()
-      e.preventDefault()
-      setDragging({ taskId, startX: e.clientX, originalDueDate: currentDueDate, type })
+  function handleBarMouseDown(e: React.MouseEvent, task: Task) {
+    if (!task.dueDate || task.status === "done") return
+    e.preventDefault()
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
+    const startX = e.clientX
+    let didDrag = false
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = Math.abs(moveEvent.clientX - startX)
+      if (delta > MIN_DRAG_PX) {
+        didDrag = true
+        // Visual feedback
         if (!containerRef.current) return
-        const containerWidth = containerRef.current.offsetWidth - 160 // subtract label column
-        const pixelsPerDay = containerWidth / TOTAL_DAYS
-        const deltaX = moveEvent.clientX - e.clientX
-        const deltaDays = Math.round(deltaX / pixelsPerDay)
-
-        if (deltaDays !== 0) {
-          const origDate = new Date(currentDueDate + "T12:00:00")
-          origDate.setDate(origDate.getDate() + deltaDays)
-          const newDate = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}`
-
-          // Visual feedback — update bar position immediately
-          const bar = document.querySelector(`[data-task-bar="${taskId}"]`) as HTMLElement
-          if (bar) {
-            const task = allDisplayTasks.find((t) => t.id === taskId)
-            if (task) {
-              const tempTask = { ...task, dueDate: newDate }
-              const pos = getBarPosition(tempTask)
-              bar.style.left = pos.left
-              bar.style.width = pos.width
-            }
-          }
-        }
-      }
-
-      const handleMouseUp = (upEvent: MouseEvent) => {
-        window.removeEventListener("mousemove", handleMouseMove)
-        window.removeEventListener("mouseup", handleMouseUp)
-
-        if (!containerRef.current) {
-          setDragging(null)
-          return
-        }
-
         const containerWidth = containerRef.current.offsetWidth - 160
         const pixelsPerDay = containerWidth / TOTAL_DAYS
-        const deltaX = upEvent.clientX - e.clientX
-        const deltaDays = Math.round(deltaX / pixelsPerDay)
+        const deltaDays = Math.round((moveEvent.clientX - startX) / pixelsPerDay)
 
-        if (deltaDays !== 0) {
-          const origDate = new Date(currentDueDate + "T12:00:00")
+        const bar = document.querySelector(`[data-task-bar="${task.id}"]`) as HTMLElement
+        if (bar && deltaDays !== 0) {
+          const origDate = new Date(task.dueDate! + "T12:00:00")
           origDate.setDate(origDate.getDate() + deltaDays)
-          const newDate = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}`
-
-          const task = allDisplayTasks.find((t) => t.id === taskId)
-          if (task) {
-            startTransition(async () => {
-              const formData = new FormData()
-              formData.set("title", task.title)
-              formData.set("description", task.description || "")
-              formData.set("priority", task.priority)
-              formData.set("dueDate", newDate)
-              await updateTask(task.id, formData)
-            })
-          }
+          const tempTask = { ...task, dueDate: `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}` }
+          const pos = getBarPosition(tempTask)
+          bar.style.left = pos.left
+          bar.style.width = pos.width
         }
+      }
+    }
 
-        setDragging(null)
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mouseup", handleMouseUp)
+
+      if (!didDrag) {
+        // It was a click, not a drag — open modal
+        setEditingTask(task)
+        return
       }
 
-      window.addEventListener("mousemove", handleMouseMove)
-      window.addEventListener("mouseup", handleMouseUp)
-    },
-    [allDisplayTasks]
-  )
+      if (!containerRef.current) return
+      const containerWidth = containerRef.current.offsetWidth - 160
+      const pixelsPerDay = containerWidth / TOTAL_DAYS
+      const deltaDays = Math.round((upEvent.clientX - startX) / pixelsPerDay)
+
+      if (deltaDays !== 0) {
+        const origDate = new Date(task.dueDate! + "T12:00:00")
+        origDate.setDate(origDate.getDate() + deltaDays)
+        const newDate = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, "0")}-${String(origDate.getDate()).padStart(2, "0")}`
+
+        startTransition(async () => {
+          const formData = new FormData()
+          formData.set("title", task.title)
+          formData.set("description", task.description || "")
+          formData.set("priority", task.priority)
+          formData.set("dueDate", newDate)
+          await updateTask(task.id, formData)
+        })
+      }
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mouseup", handleMouseUp)
+  }
 
   if (allDisplayTasks.length === 0) {
     return (
@@ -230,7 +214,6 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
                 key={task.id}
                 className="flex border-b border-border-light/20 last:border-b-0 group"
               >
-                {/* Task name */}
                 <div
                   className="w-40 shrink-0 border-r border-border-light/40 px-3 py-3 flex items-center gap-2 cursor-pointer hover:bg-surface-hover/50 transition-colors"
                   onClick={() => setEditingTask(task)}
@@ -247,9 +230,7 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
                   </span>
                 </div>
 
-                {/* Bar area */}
                 <div className="flex-1 relative py-2">
-                  {/* Today line */}
                   {todayIndex >= 0 && (
                     <div
                       className="absolute top-0 bottom-0 w-px bg-accent/40 z-[5]"
@@ -257,43 +238,23 @@ export function TimelineView({ tasks }: { tasks: Task[] }) {
                     />
                   )}
 
-                  {/* Task bar — draggable */}
                   <div
                     data-task-bar={task.id}
                     className={cn(
-                      "absolute top-2 h-6 rounded-full cursor-grab active:cursor-grabbing transition-opacity",
+                      "absolute top-2 h-6 rounded-full transition-opacity",
                       isDone && "opacity-40",
-                      dragging?.taskId === task.id && "opacity-70 ring-2 ring-accent"
+                      hasDueDate && !isDone ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
                     )}
                     style={{
                       left: pos.left,
                       width: pos.width,
                       backgroundColor: statusColors[task.status] || "var(--accent)",
                     }}
-                    onMouseDown={
-                      hasDueDate && !isDone
-                        ? (e) => handleMouseDown(e, task.id, task.dueDate!, "move")
-                        : undefined
-                    }
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setEditingTask(task)
-                    }}
+                    onMouseDown={(e) => handleBarMouseDown(e, task)}
                   >
-                    <span className="absolute inset-0 flex items-center px-2 text-[9px] font-semibold text-white truncate">
+                    <span className="absolute inset-0 flex items-center px-2 text-[9px] font-semibold text-white truncate pointer-events-none">
                       {task.title}
                     </span>
-
-                    {/* Resize handle on right edge */}
-                    {hasDueDate && !isDone && (
-                      <div
-                        className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 rounded-r-full"
-                        onMouseDown={(e) => {
-                          e.stopPropagation()
-                          handleMouseDown(e, task.id, task.dueDate!, "resize")
-                        }}
-                      />
-                    )}
                   </div>
                 </div>
               </div>
