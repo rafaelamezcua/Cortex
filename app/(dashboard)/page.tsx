@@ -5,7 +5,9 @@ import { WeatherWidget } from "@/app/components/dashboard/weather-widget"
 import { EmailWidget } from "@/app/components/dashboard/email-widget"
 import { DailyBriefing } from "@/app/components/dashboard/daily-briefing"
 import { CanvasWidget } from "@/app/components/dashboard/canvas-widget"
+import { HabitsWidget } from "@/app/components/dashboard/habits-widget"
 import { isCanvasConnected } from "@/lib/integrations/canvas"
+import { getHabits, getHabitLogs } from "@/lib/actions/habits"
 import { getTasks } from "@/lib/actions/tasks"
 import { getNotes } from "@/lib/actions/notes"
 import { getTodaysEvents } from "@/lib/actions/calendar"
@@ -32,12 +34,17 @@ function getGreeting(): string {
 
 export default async function DashboardPage() {
   const greeting = getGreeting()
-  const [tasks, notes, localEvents, googleConnected, canvasConnected] = await Promise.all([
+  const now2 = new Date()
+  const todayStr2 = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}-${String(now2.getDate()).padStart(2, "0")}`
+
+  const [tasks, notes, localEvents, googleConnected, canvasConnected, allHabits, todayHabitLogs] = await Promise.all([
     getTasks(),
     getNotes(),
     getTodaysEvents(),
     isGoogleConnected(),
     isCanvasConnected(),
+    getHabits(),
+    getHabitLogs(todayStr2, todayStr2),
   ])
 
   type DashboardEvent = {
@@ -217,6 +224,9 @@ export default async function DashboardPage() {
             </div>
           </Card>
         </Link>
+
+        {/* Habits Widget */}
+        <HabitsWidget habits={allHabits} todayLogs={todayHabitLogs} todayStr={todayStr2} />
 
         {/* Canvas Widget */}
         <CanvasWidget isConnected={canvasConnected} />

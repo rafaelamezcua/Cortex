@@ -58,6 +58,37 @@ export const chatMessages = sqliteTable("chat_messages", {
   createdAt: text("created_at").notNull(),
 })
 
+export const habits = sqliteTable("habits", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  icon: text("icon"),
+  color: text("color").notNull(),
+  frequency: text("frequency", {
+    enum: ["daily", "weekdays", "weekly"],
+  })
+    .notNull()
+    .default("daily"),
+  targetPerDay: integer("target_per_day").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+})
+
+export const habitLogs = sqliteTable("habit_logs", {
+  id: text("id").primaryKey(),
+  habitId: text("habit_id").notNull(),
+  date: text("date").notNull(),
+  count: integer("count").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+})
+
+export const journalEntries = sqliteTable("journal_entries", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  content: text("content"),
+  mood: integer("mood"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
 export const localCalendars = sqliteTable("local_calendars", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

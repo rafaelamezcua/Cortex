@@ -13,6 +13,8 @@ import {
   Monitor,
   Menu,
   X,
+  Flame,
+  BookOpen,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -26,6 +28,8 @@ const navItems = [
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/notes", label: "Notes", icon: FileText },
+  { href: "/habits", label: "Habits", icon: Flame },
+  { href: "/journal", label: "Journal", icon: BookOpen },
 ]
 
 export function Sidebar() {
