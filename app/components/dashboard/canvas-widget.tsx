@@ -108,7 +108,7 @@ export function CanvasWidget({ isConnected }: { isConnected: boolean }) {
         <p className="text-sm text-foreground-tertiary">No upcoming assignments</p>
       ) : (
         <div className="space-y-2.5">
-          {assignments.slice(0, 5).map((a) => {
+          {assignments.slice(0, 8).map((a) => {
             const dueDate = a.due_at ? new Date(a.due_at) : null
             const dueDateStr = dueDate
               ? `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-${String(dueDate.getDate()).padStart(2, "0")}`

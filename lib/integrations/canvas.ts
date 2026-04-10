@@ -1,4 +1,4 @@
-const CANVAS_API_URL = process.env.CANVAS_API_URL // e.g. https://canvas.university.edu
+const CANVAS_API_URL = process.env.CANVAS_API_URL
 const CANVAS_API_TOKEN = process.env.CANVAS_API_TOKEN
 
 export interface CanvasCourse {
@@ -30,6 +30,43 @@ export interface CanvasSubmission {
   submitted_at: string | null
 }
 
+// Paginated fetch — follows Canvas Link headers to get ALL results
+async function canvasFetchAll<T>(endpoint: string): Promise<T[]> {
+  if (!CANVAS_API_URL || !CANVAS_API_TOKEN) {
+    throw new Error("Canvas not configured")
+  }
+
+  const allItems: T[] = []
+  let url: string | null = `${CANVAS_API_URL}/api/v1${endpoint}`
+
+  // Add per_page=100 if not already in the URL
+  if (!url.includes("per_page")) {
+    url += (url.includes("?") ? "&" : "?") + "per_page=100"
+  }
+
+  let currentUrl: string | null = url
+  while (currentUrl) {
+    const res: Response = await fetch(currentUrl, {
+      headers: { Authorization: `Bearer ${CANVAS_API_TOKEN}` },
+    })
+
+    if (!res.ok) throw new Error(`Canvas API error: ${res.status}`)
+
+    const items = (await res.json()) as T[]
+    allItems.push(...items)
+
+    // Check for next page in Link header
+    const linkHeader = res.headers.get("Link")
+    currentUrl = null
+    if (linkHeader) {
+      const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/)
+      if (nextMatch) currentUrl = nextMatch[1]
+    }
+  }
+
+  return allItems
+}
+
 async function canvasFetch<T>(endpoint: string): Promise<T> {
   if (!CANVAS_API_URL || !CANVAS_API_TOKEN) {
     throw new Error("Canvas not configured")
@@ -37,15 +74,10 @@ async function canvasFetch<T>(endpoint: string): Promise<T> {
 
   const url = `${CANVAS_API_URL}/api/v1${endpoint}`
   const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${CANVAS_API_TOKEN}`,
-    },
+    headers: { Authorization: `Bearer ${CANVAS_API_TOKEN}` },
   })
 
-  if (!response.ok) {
-    throw new Error(`Canvas API error: ${response.status}`)
-  }
-
+  if (!response.ok) throw new Error(`Canvas API error: ${response.status}`)
   return response.json()
 }
 
@@ -61,10 +93,10 @@ export async function isCanvasConnected(): Promise<boolean> {
 
 export async function getCourses(): Promise<CanvasCourse[]> {
   try {
-    const courses = await canvasFetch<CanvasCourse[]>(
-      "/courses?enrollment_state=active&per_page=50"
+    const courses = await canvasFetchAll<CanvasCourse>(
+      "/courses?enrollment_state=active"
     )
-    return courses.filter((c) => c.name) // Filter out unnamed courses
+    return courses.filter((c) => c.name)
   } catch {
     return []
   }
@@ -77,16 +109,13 @@ export async function getUpcomingAssignments(): Promise<CanvasAssignment[]> {
 
     for (const course of courses) {
       try {
-        const assignments = await canvasFetch<CanvasAssignment[]>(
-          `/courses/${course.id}/assignments?order_by=due_at&per_page=30&bucket=upcoming`
+        const assignments = await canvasFetchAll<CanvasAssignment>(
+          `/courses/${course.id}/assignments?order_by=due_at&bucket=upcoming`
         )
 
         for (const a of assignments) {
           if (a.due_at) {
-            allAssignments.push({
-              ...a,
-              course_name: course.name,
-            })
+            allAssignments.push({ ...a, course_name: course.name })
           }
         }
       } catch {
@@ -94,7 +123,6 @@ export async function getUpcomingAssignments(): Promise<CanvasAssignment[]> {
       }
     }
 
-    // Sort by due date
     return allAssignments.sort((a, b) =>
       (a.due_at || "").localeCompare(b.due_at || "")
     )
@@ -110,15 +138,12 @@ export async function getAllAssignments(): Promise<CanvasAssignment[]> {
 
     for (const course of courses) {
       try {
-        const assignments = await canvasFetch<CanvasAssignment[]>(
-          `/courses/${course.id}/assignments?order_by=due_at&per_page=50`
+        const assignments = await canvasFetchAll<CanvasAssignment>(
+          `/courses/${course.id}/assignments?order_by=due_at`
         )
 
         for (const a of assignments) {
-          allAssignments.push({
-            ...a,
-            course_name: course.name,
-          })
+          allAssignments.push({ ...a, course_name: course.name })
         }
       } catch {
         // Skip courses that fail
@@ -137,12 +162,10 @@ export async function getGrades(): Promise<
   { course: string; grade: string | null; score: number | null }[]
 > {
   try {
-    const enrollments = await canvasFetch<
-      {
-        course_id: number
-        grades: { current_score: number | null; current_grade: string | null }
-      }[]
-    >("/users/self/enrollments?type[]=StudentEnrollment&state[]=active&per_page=50")
+    const enrollments = await canvasFetchAll<{
+      course_id: number
+      grades: { current_score: number | null; current_grade: string | null }
+    }>("/users/self/enrollments?type[]=StudentEnrollment&state[]=active")
 
     const courses = await getCourses()
     const courseMap = new Map(courses.map((c) => [c.id, c.name]))

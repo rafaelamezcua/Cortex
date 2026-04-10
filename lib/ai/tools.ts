@@ -452,7 +452,7 @@ export const aiTools = {
       }
 
       return {
-        assignments: assignments.slice(0, 15).map((a) => ({
+        assignments: assignments.map((a) => ({
           name: a.name,
           course: a.course_name,
           dueAt: a.due_at,
