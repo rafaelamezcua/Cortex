@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils"
 import { getCalendarGrid, isToday, formatDateKey, getMonthName } from "@/lib/calendar-utils"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { useState, useTransition } from "react"
-import { createLocalCalendar } from "@/lib/actions/local-calendars"
+import { createLocalCalendar, deleteLocalCalendar } from "@/lib/actions/local-calendars"
+import { Download, Trash2 } from "lucide-react"
 
 interface CalendarInfo {
   id: string
@@ -158,45 +159,79 @@ export function CalendarSidebar({
             <span className="text-[13px] text-foreground">Luma (Local)</span>
           </button>
 
-          {/* Google calendars */}
-          {calendars.map((cal) => (
-            <button
-              key={cal.id}
-              onClick={() => onToggleCalendar(cal.id)}
-              className="flex w-full items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm transition-colors hover:bg-surface-hover"
-            >
-              <div
-                className={cn(
-                  "flex h-4 w-4 items-center justify-center rounded border-2 transition-colors"
-                )}
-                style={{
-                  borderColor: enabledCalendars.has(cal.id)
-                    ? cal.backgroundColor
-                    : "var(--foreground-quaternary)",
-                  backgroundColor: enabledCalendars.has(cal.id)
-                    ? cal.backgroundColor
-                    : "transparent",
-                }}
-              >
-                {enabledCalendars.has(cal.id) && (
-                  <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+          {/* All calendars */}
+          {calendars.map((cal) => {
+            const isLocalCal = cal.id.startsWith("local-")
+            return (
+              <div key={cal.id} className="group flex items-center">
+                <button
+                  onClick={() => onToggleCalendar(cal.id)}
+                  className="flex flex-1 items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm transition-colors hover:bg-surface-hover"
+                >
+                  <div
+                    className="flex h-4 w-4 items-center justify-center rounded border-2 transition-colors"
+                    style={{
+                      borderColor: enabledCalendars.has(cal.id)
+                        ? cal.backgroundColor
+                        : "var(--foreground-quaternary)",
+                      backgroundColor: enabledCalendars.has(cal.id)
+                        ? cal.backgroundColor
+                        : "transparent",
+                    }}
+                  >
+                    {enabledCalendars.has(cal.id) && (
+                      <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-[13px] text-foreground truncate">
+                    {cal.summary}
+                    {cal.primary && (
+                      <span className="ml-1 text-foreground-quaternary">(primary)</span>
+                    )}
+                  </span>
+                </button>
+                {/* Actions — export + delete for local */}
+                <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <a
+                    href={`/api/calendar/export?calendarId=${encodeURIComponent(cal.id)}&name=${encodeURIComponent(cal.summary)}`}
+                    className="rounded p-1 text-foreground-quaternary hover:text-accent transition-colors"
+                    title="Export .ics"
+                  >
+                    <Download className="h-3 w-3" />
+                  </a>
+                  {isLocalCal && (
+                    <DeleteCalButton calId={cal.id.replace("local-", "")} />
+                  )}
+                </div>
               </div>
-              <span className="text-[13px] text-foreground truncate">
-                {cal.summary}
-                {cal.primary && (
-                  <span className="ml-1 text-foreground-quaternary">(primary)</span>
-                )}
-              </span>
-            </button>
-          ))}
+            )
+          })}
           {/* Create new calendar */}
           <CreateCalendarButton onCreated={(id) => onToggleCalendar(id)} />
         </div>
       </div>
     </div>
+  )
+}
+
+function DeleteCalButton({ calId }: { calId: string }) {
+  const [isPending, startTransition] = useTransition()
+  return (
+    <button
+      disabled={isPending}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (confirm("Delete this calendar?")) {
+          startTransition(() => deleteLocalCalendar(calId))
+        }
+      }}
+      className="rounded p-1 text-foreground-quaternary hover:text-danger transition-colors disabled:opacity-50"
+      title="Delete calendar"
+    >
+      <Trash2 className="h-3 w-3" />
+    </button>
   )
 }
 
