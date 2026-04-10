@@ -9,7 +9,7 @@ import { EventForm } from "./event-form"
 import { EventPreview } from "./event-preview"
 import { Button } from "@/app/components/ui/button"
 import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Rows3, CalendarDays } from "lucide-react"
-import { getMonthName } from "@/lib/calendar-utils"
+import { getMonthName, formatDateKey } from "@/lib/calendar-utils"
 import { cn } from "@/lib/utils"
 
 type CalendarEvent = {
@@ -43,7 +43,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(
-    now.toISOString().split("T")[0]
+    formatDateKey(now)
   )
   const [viewMode, setViewMode] = useState<ViewMode>("month")
   const [showForm, setShowForm] = useState(false)
@@ -181,7 +181,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     const today = new Date()
     setYear(today.getFullYear())
     setMonth(today.getMonth())
-    setSelectedDate(today.toISOString().split("T")[0])
+    setSelectedDate(formatDateKey(today))
   }
 
   function handleNavigateMonth(y: number, m: number) {
@@ -411,7 +411,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                     month: "short",
                     day: "numeric",
                   })
-                  const todayKey = new Date().toISOString().split("T")[0]
+                  const todayKey = formatDateKey(new Date())
 
                   return (
                     <div key={dateKey} className="flex gap-4">

@@ -13,14 +13,12 @@ export function getCalendarGrid(year: number, month: number): (Date | null)[] {
   const firstDayOfWeek = days[0].getDay()
   const grid: (Date | null)[] = []
 
-  // Pad start with nulls
   for (let i = 0; i < firstDayOfWeek; i++) {
     grid.push(null)
   }
 
   grid.push(...days)
 
-  // Pad end to complete the last week
   while (grid.length % 7 !== 0) {
     grid.push(null)
   }
@@ -28,12 +26,24 @@ export function getCalendarGrid(year: number, month: number): (Date | null)[] {
   return grid
 }
 
+// Use LOCAL date, not UTC — this was causing the wrong day to highlight
 export function formatDateKey(date: Date): string {
-  return date.toISOString().split("T")[0]
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+export function getTodayKey(): string {
+  return formatDateKey(new Date())
 }
 
 export function isSameDay(a: Date, b: Date): boolean {
-  return formatDateKey(a) === formatDateKey(b)
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 export function isToday(date: Date): boolean {

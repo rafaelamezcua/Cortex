@@ -1,6 +1,7 @@
 "use client"
 
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/calendar"
+import { formatDateKey } from "@/lib/calendar-utils"
 import { Button } from "@/app/components/ui/button"
 import { X, Calendar as CalendarIcon } from "lucide-react"
 import { useTransition, useEffect, useState, useRef, useCallback } from "react"
@@ -54,13 +55,13 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
     ? event.startTime.slice(0, 16)
     : defaultDate
       ? `${defaultDate}T09:00`
-      : `${new Date().toISOString().split("T")[0]}T09:00`
+      : `${formatDateKey(new Date())}T09:00`
 
   const defaultEnd = event
     ? event.endTime.slice(0, 16)
     : defaultDate
       ? `${defaultDate}T10:00`
-      : `${new Date().toISOString().split("T")[0]}T10:00`
+      : `${formatDateKey(new Date())}T10:00`
 
   // Fetch Google Calendars
   useEffect(() => {
