@@ -38,19 +38,37 @@ interface CalendarViewProps {
 
 type ViewMode = "month" | "week" | "agenda"
 
+function loadCalState() {
+  if (typeof window === "undefined") return null
+  try {
+    const saved = localStorage.getItem("luma-cal-state")
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return null
+}
+
+function saveCalState(state: { year: number; month: number; selectedDate: string | null; viewMode: string }) {
+  localStorage.setItem("luma-cal-state", JSON.stringify(state))
+}
+
 export function CalendarView({ initialEvents }: CalendarViewProps) {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
-  const [selectedDate, setSelectedDate] = useState<string | null>(
-    formatDateKey(now)
+  const saved = loadCalState()
+
+  const [year, setYearRaw] = useState(saved?.year ?? now.getFullYear())
+  const [month, setMonthRaw] = useState(saved?.month ?? now.getMonth())
+  const [selectedDate, setSelectedDateRaw] = useState<string | null>(
+    saved?.selectedDate ?? formatDateKey(now)
   )
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("luma-cal-view") as ViewMode) || "month"
-    }
-    return "month"
-  })
+  const [viewMode, setViewModeRaw] = useState<ViewMode>(
+    (saved?.viewMode as ViewMode) ?? "month"
+  )
+
+  // Wrapped setters that persist to localStorage
+  function setYear(y: number) { setYearRaw(y); saveCalState({ year: y, month, selectedDate, viewMode }) }
+  function setMonth(m: number) { setMonthRaw(m); saveCalState({ year, month: m, selectedDate, viewMode }) }
+  function setSelectedDate(d: string | null) { setSelectedDateRaw(d); saveCalState({ year, month, selectedDate: d, viewMode }) }
+  function changeViewMode(mode: ViewMode) { setViewModeRaw(mode); saveCalState({ year, month, selectedDate, viewMode: mode }) }
   const [showForm, setShowForm] = useState(false)
   const [formDefaults, setFormDefaults] = useState<{
     date?: string
@@ -158,11 +176,6 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
       localStorage.setItem("luma-cal-enabled", JSON.stringify([...next]))
       return next
     })
-  }
-
-  function changeViewMode(mode: ViewMode) {
-    setViewMode(mode)
-    localStorage.setItem("luma-cal-view", mode)
   }
 
   const filteredEvents = events.filter((e) => {
