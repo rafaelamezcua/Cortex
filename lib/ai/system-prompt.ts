@@ -3,6 +3,7 @@ import { tasks, notes, calendarEvents, memories } from "@/lib/schema"
 import { ne, and, gte, lte } from "drizzle-orm"
 import { getGoogleCalendarEvents } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
+import { getUpcomingAssignments, isCanvasConnected } from "@/lib/integrations/canvas"
 
 export async function getSystemPrompt(): Promise<string> {
   const activeTasks = await db
@@ -151,12 +152,29 @@ ${
     : "None yet."
 }
 
+${await (async () => {
+  const canvasOk = await isCanvasConnected()
+  if (!canvasOk) return ""
+  try {
+    const assignments = await getUpcomingAssignments()
+    if (assignments.length === 0) return "\nCanvas: No upcoming assignments.\n"
+    const upcoming = assignments.slice(0, 8)
+    return `
+Upcoming Canvas assignments (${assignments.length} total):
+${upcoming.map((a) => `${a.course_name}: "${a.name}" due ${a.due_at ? new Date(a.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "no date"}`).join("\n")}
+${assignments.length > 8 ? `...and ${assignments.length - 8} more` : ""}
+`
+  } catch {
+    return ""
+  }
+})()}
 CAPABILITIES:
 - Create, complete, list, and delete tasks
 - Create, edit, and delete calendar events (including on specific Google Calendars)
 - List available Google Calendars
 - Check schedule for any date range
 - Save, update, recall, and forget memories about Ramez
+- Check Canvas assignments, grades, and courses
 - Answer questions, brainstorm, help plan
 
 Use your tools proactively when Ramez asks to do things — don't just describe what he could do, actually do it.`

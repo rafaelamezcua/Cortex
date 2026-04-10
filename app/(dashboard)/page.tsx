@@ -4,6 +4,8 @@ import { Card } from "@/app/components/ui/card"
 import { WeatherWidget } from "@/app/components/dashboard/weather-widget"
 import { EmailWidget } from "@/app/components/dashboard/email-widget"
 import { DailyBriefing } from "@/app/components/dashboard/daily-briefing"
+import { CanvasWidget } from "@/app/components/dashboard/canvas-widget"
+import { isCanvasConnected } from "@/lib/integrations/canvas"
 import { getTasks } from "@/lib/actions/tasks"
 import { getNotes } from "@/lib/actions/notes"
 import { getTodaysEvents } from "@/lib/actions/calendar"
@@ -30,11 +32,12 @@ function getGreeting(): string {
 
 export default async function DashboardPage() {
   const greeting = getGreeting()
-  const [tasks, notes, localEvents, googleConnected] = await Promise.all([
+  const [tasks, notes, localEvents, googleConnected, canvasConnected] = await Promise.all([
     getTasks(),
     getNotes(),
     getTodaysEvents(),
     isGoogleConnected(),
+    isCanvasConnected(),
   ])
 
   type DashboardEvent = {
@@ -214,6 +217,9 @@ export default async function DashboardPage() {
             </div>
           </Card>
         </Link>
+
+        {/* Canvas Widget */}
+        <CanvasWidget isConnected={canvasConnected} />
 
         {/* Email Widget */}
         <EmailWidget isConnected={googleConnected} />

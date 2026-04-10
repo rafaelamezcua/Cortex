@@ -12,6 +12,12 @@ import {
   getGoogleCalendars,
 } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
+import {
+  getUpcomingAssignments,
+  getCourses,
+  getGrades,
+  isCanvasConnected,
+} from "@/lib/integrations/canvas"
 
 export const aiTools = {
   createTask: tool({
@@ -416,6 +422,85 @@ export const aiTools = {
           primary: c.primary,
         })),
         count: calendars.length,
+      }
+    },
+  }),
+
+  // --- Canvas tools ---
+
+  getAssignments: tool({
+    description:
+      "Get upcoming assignments from Canvas LMS. Shows what's due and when.",
+    inputSchema: z.object({
+      courseFilter: z
+        .string()
+        .optional()
+        .describe("Optional course name to filter by"),
+    }),
+    execute: async ({ courseFilter }) => {
+      const connected = await isCanvasConnected()
+      if (!connected) {
+        return { assignments: [], message: "Canvas is not connected." }
+      }
+
+      let assignments = await getUpcomingAssignments()
+
+      if (courseFilter) {
+        assignments = assignments.filter((a) =>
+          a.course_name.toLowerCase().includes(courseFilter.toLowerCase())
+        )
+      }
+
+      return {
+        assignments: assignments.slice(0, 15).map((a) => ({
+          name: a.name,
+          course: a.course_name,
+          dueAt: a.due_at,
+          points: a.points_possible,
+          url: a.html_url,
+        })),
+        count: assignments.length,
+      }
+    },
+  }),
+
+  getGradesSummary: tool({
+    description: "Get current grades for all Canvas courses.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const connected = await isCanvasConnected()
+      if (!connected) {
+        return { grades: [], message: "Canvas is not connected." }
+      }
+
+      const grades = await getGrades()
+      return {
+        grades: grades.map((g) => ({
+          course: g.course,
+          grade: g.grade || "N/A",
+          score: g.score !== null ? `${g.score}%` : "N/A",
+        })),
+        count: grades.length,
+      }
+    },
+  }),
+
+  getCanvasCourses: tool({
+    description: "List all active Canvas courses.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const connected = await isCanvasConnected()
+      if (!connected) {
+        return { courses: [], message: "Canvas is not connected." }
+      }
+
+      const courses = await getCourses()
+      return {
+        courses: courses.map((c) => ({
+          name: c.name,
+          code: c.course_code,
+        })),
+        count: courses.length,
       }
     },
   }),
