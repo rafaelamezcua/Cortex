@@ -89,18 +89,27 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     return new Set(["local"])
   })
 
-  // Fetch Google Calendar list
+  // Fetch Google Calendar list — only add NEW calendars, respect saved preferences
   useEffect(() => {
     fetch("/api/calendars")
       .then((r) => r.json())
       .then((data) => {
         if (data.calendars?.length) {
           setCalendars(data.calendars)
-          setEnabledCalendars((prev) => {
-            const next = new Set(prev)
-            data.calendars.forEach((c: CalendarInfo) => next.add(c.id))
-            return next
-          })
+
+          // Check if user has saved preferences before
+          const hasSavedPrefs = localStorage.getItem("luma-cal-enabled")
+
+          if (!hasSavedPrefs) {
+            // First time — enable all calendars
+            setEnabledCalendars((prev) => {
+              const next = new Set(prev)
+              data.calendars.forEach((c: CalendarInfo) => next.add(c.id))
+              localStorage.setItem("luma-cal-enabled", JSON.stringify([...next]))
+              return next
+            })
+          }
+          // Otherwise: keep whatever the user had saved — don't touch enabledCalendars
         }
       })
       .catch(() => {})
