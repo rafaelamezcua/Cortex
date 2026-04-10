@@ -8,13 +8,13 @@ import {
   CheckSquare,
   FileText,
   ChevronLeft,
-  Sparkles,
   Sun,
   Moon,
   Monitor,
   Menu,
   X,
 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -53,9 +53,13 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[--radius-md] bg-accent shadow-sm">
-            <Sparkles className="h-[18px] w-[18px] text-white" />
-          </div>
+          <Image
+            src="/luma-logo.svg"
+            alt="Luma"
+            width={36}
+            height={36}
+            className="shrink-0"
+          />
           {!collapsed && (
             <span className="text-[17px] font-semibold tracking-tight text-foreground">
               Luma

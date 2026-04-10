@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
-import { Sparkles, User } from "lucide-react"
+import { User } from "lucide-react"
+import Image from "next/image"
 import ReactMarkdown from "react-markdown"
 
 interface MessageBubbleProps {
@@ -22,7 +23,7 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
         {isUser ? (
           <User className="h-4 w-4" />
         ) : (
-          <Sparkles className="h-4 w-4 text-accent" />
+          <Image src="/luma-logo.svg" alt="Luma" width={20} height={20} />
         )}
       </div>
 
