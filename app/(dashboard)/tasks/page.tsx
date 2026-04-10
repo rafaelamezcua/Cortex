@@ -1,6 +1,8 @@
+export const dynamic = "force-dynamic"
+
 import { getTasks } from "@/lib/actions/tasks"
 import { TaskForm } from "@/app/components/tasks/task-form"
-import { TaskList } from "@/app/components/tasks/task-list"
+import { TasksView } from "@/app/components/tasks/tasks-view"
 
 export default async function TasksPage() {
   const tasks = await getTasks()
@@ -15,7 +17,7 @@ export default async function TasksPage() {
       </div>
 
       <TaskForm />
-      <TaskList tasks={tasks} />
+      <TasksView tasks={tasks} />
     </div>
   )
 }
