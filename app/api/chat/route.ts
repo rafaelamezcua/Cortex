@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     system: systemPrompt,
     messages: modelMessages,
     tools: aiTools,
-    maxOutputTokens: 1024,
+    maxOutputTokens: 2048,
     stopWhen: stepCountIs(5),
     onFinish: async ({ text }) => {
       if (conversationId && text) {

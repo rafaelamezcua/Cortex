@@ -4,10 +4,15 @@ import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { MessageBubble } from "./message-bubble"
 import { ChatInput } from "./chat-input"
-import { Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState, useMemo, type FormEvent } from "react"
 import type { UIMessage } from "ai"
+
+interface FileAttachment {
+  file: File
+  preview: string | null
+  type: "image" | "pdf"
+}
 
 interface ChatContainerProps {
   conversationId: string
@@ -20,8 +25,8 @@ export function ChatContainer({
 }: ChatContainerProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState("")
+  const [files, setFiles] = useState<FileAttachment[]>([])
 
-  // Convert initial messages to UIMessage format
   const uiInitialMessages: UIMessage[] = useMemo(
     () =>
       initialMessages.map((m, i) => ({
@@ -49,26 +54,60 @@ export function ChatContainer({
 
   const isLoading = status === "streaming" || status === "submitted"
 
-  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-    sendMessage({ text: input })
-    setInput("")
+  async function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.readAsDataURL(file)
+    })
   }
 
-  // Extract text content from message parts
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if ((!input.trim() && files.length === 0) || isLoading) return
+
+    if (files.length > 0) {
+      // Build file parts as data URLs
+      const fileUIParts: { type: "file"; url: string; mediaType: string }[] = []
+
+      for (const attachment of files) {
+        const dataUrl = await fileToDataUrl(attachment.file)
+        fileUIParts.push({
+          type: "file",
+          url: dataUrl,
+          mediaType: attachment.file.type,
+        })
+      }
+
+      sendMessage({
+        text: input || "What do you see in this?",
+        files: fileUIParts,
+      })
+
+      setFiles([])
+      setInput("")
+    } else {
+      sendMessage({ text: input })
+      setInput("")
+    }
+  }
+
   function getMessageText(message: UIMessage): string {
     return message.parts
       .filter((p) => p.type === "text")
       .map((p) => (p as { type: "text"; text: string }).text)
       .join("")
+  }
+
+  // Check if message has file parts
+  function getMessageFiles(message: UIMessage): { type: string; data?: string; mediaType?: string }[] {
+    return message.parts.filter((p) => p.type === "file") as { type: string; data?: string; mediaType?: string }[]
   }
 
   return (
@@ -85,14 +124,14 @@ export function ChatContainer({
                 Chat with Luma
               </h2>
               <p className="mt-1 text-sm text-foreground-secondary">
-                Ask me anything, or let me help manage your tasks.
+                Ask me anything, manage tasks, or send me images and PDFs.
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 mt-2">
               {[
                 "What are my tasks?",
                 "Help me plan my day",
-                "Create a new task",
+                "What assignments do I have?",
               ].map((suggestion) => (
                 <button
                   key={suggestion}
@@ -110,13 +149,37 @@ export function ChatContainer({
               .filter((m) => m.role !== "system")
               .map((message) => {
                 const text = getMessageText(message)
-                if (!text) return null
+                const msgFiles = getMessageFiles(message)
+
+                if (!text && msgFiles.length === 0) return null
                 return (
-                  <MessageBubble
-                    key={message.id}
-                    role={message.role as "user" | "assistant"}
-                    content={text}
-                  />
+                  <div key={message.id}>
+                    {/* Show attached files above message */}
+                    {msgFiles.length > 0 && message.role === "user" && (
+                      <div className="flex justify-end mb-1">
+                        <div className="flex gap-1.5">
+                          {msgFiles.map((f, i) => (
+                            <div
+                              key={i}
+                              className="h-16 w-16 rounded-[--radius-md] border border-border-light overflow-hidden bg-background-secondary flex items-center justify-center"
+                            >
+                              {f.mediaType?.startsWith("image/") ? (
+                                <span className="text-xs text-foreground-tertiary">📷</span>
+                              ) : (
+                                <span className="text-xs text-foreground-tertiary">📄</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {text && (
+                      <MessageBubble
+                        role={message.role as "user" | "assistant"}
+                        content={text}
+                      />
+                    )}
+                  </div>
                 )
               })}
             {isLoading &&
@@ -151,9 +214,11 @@ export function ChatContainer({
           isLoading={isLoading}
           onInputChange={setInput}
           onSubmit={handleSubmit}
+          files={files}
+          onFilesChange={setFiles}
         />
         <p className="mt-2 text-center text-xs text-foreground-quaternary">
-          Luma can make mistakes. Verify important information.
+          Luma can read images and PDFs. Paste or attach files.
         </p>
       </div>
     </div>
