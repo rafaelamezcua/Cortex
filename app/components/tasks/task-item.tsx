@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { toggleTask, deleteTask } from "@/lib/actions/tasks"
-import { Check, Trash2, Circle } from "lucide-react"
+import { Check, Trash2 } from "lucide-react"
 import { useTransition } from "react"
 
 interface TaskItemProps {
@@ -29,8 +29,8 @@ export function TaskItem({ task }: TaskItemProps) {
   return (
     <div
       className={cn(
-        "group flex items-start gap-3 rounded-[--radius-md] border border-border-light bg-surface p-4 transition-all duration-150",
-        "hover:shadow-sm",
+        "group flex items-start gap-3 rounded-[--radius-lg] border border-border-light/60 bg-surface p-4 transition-all duration-200",
+        "hover:shadow-sm hover:border-accent/20",
         isPending && "opacity-50 pointer-events-none"
       )}
     >
@@ -38,18 +38,14 @@ export function TaskItem({ task }: TaskItemProps) {
       <button
         onClick={() => startTransition(() => toggleTask(task.id))}
         className={cn(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-150",
+          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200",
           isDone
             ? "border-accent bg-accent"
-            : "border-foreground-quaternary hover:border-accent"
+            : "border-foreground-quaternary hover:border-accent hover:bg-accent/5"
         )}
         aria-label={isDone ? "Mark as incomplete" : "Mark as complete"}
       >
-        {isDone ? (
-          <Check className="h-3 w-3 text-white" />
-        ) : (
-          <Circle className="h-3 w-3 text-transparent" />
-        )}
+        {isDone && <Check className="h-3 w-3 text-white" />}
       </button>
 
       {/* Content */}
@@ -91,7 +87,7 @@ export function TaskItem({ task }: TaskItemProps) {
       {/* Delete */}
       <button
         onClick={() => startTransition(() => deleteTask(task.id))}
-        className="shrink-0 rounded-[--radius-sm] p-1.5 text-foreground-quaternary opacity-0 transition-all duration-150 hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
+        className="shrink-0 rounded-[--radius-sm] p-1.5 text-foreground-quaternary opacity-0 transition-all duration-200 hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
         aria-label="Delete task"
       >
         <Trash2 className="h-3.5 w-3.5" />

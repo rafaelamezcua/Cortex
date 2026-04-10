@@ -10,15 +10,13 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
   const isUser = role === "user"
 
   return (
-    <div
-      className={cn("flex gap-3", isUser && "flex-row-reverse")}
-    >
+    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       {/* Avatar */}
       <div
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
           isUser
-            ? "bg-foreground text-background"
+            ? "bg-accent text-white"
             : "bg-accent-light"
         )}
       >
@@ -32,10 +30,10 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
       {/* Message */}
       <div
         className={cn(
-          "max-w-[75%] rounded-[--radius-lg] px-4 py-3 text-sm leading-relaxed",
+          "max-w-[75%] rounded-[--radius-xl] px-4 py-3 text-sm leading-relaxed",
           isUser
             ? "bg-accent text-white"
-            : "bg-surface border border-border-light text-foreground"
+            : "bg-surface border border-border-light/60 text-foreground shadow-sm"
         )}
       >
         <div className="whitespace-pre-wrap">{content}</div>

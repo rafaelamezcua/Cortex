@@ -16,6 +16,7 @@ import {
   FileText,
   ArrowRight,
   Clock,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -35,7 +36,6 @@ export default async function DashboardPage() {
     isGoogleConnected(),
   ])
 
-  // Normalize to a common shape
   type DashboardEvent = {
     id: string
     title: string
@@ -85,13 +85,13 @@ export default async function DashboardPage() {
   )
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
+        <h1 className="text-4xl font-bold tracking-tight">
           {greeting}, Ramez
         </h1>
-        <p className="mt-1 text-foreground-secondary">
+        <p className="mt-2 text-[15px] text-foreground-secondary">
           Here&apos;s your day at a glance.
         </p>
       </div>
@@ -104,36 +104,36 @@ export default async function DashboardPage() {
         {/* Calendar Widget */}
         <Link href="/calendar">
           <Card variant="interactive" className="col-span-1 h-full">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[--radius-md] bg-accent-light">
-                  <Calendar className="h-[18px] w-[18px] text-accent" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
+                  <Calendar className="h-5 w-5 text-accent" />
                 </div>
-                <h2 className="text-sm font-medium text-foreground-secondary">
-                  Today&apos;s Schedule
+                <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
+                  Schedule
                 </h2>
               </div>
               <ArrowRight className="h-4 w-4 text-foreground-quaternary" />
             </div>
             {todaysEvents.length === 0 ? (
-              <p className="text-sm text-foreground-secondary">
+              <p className="text-sm text-foreground-tertiary">
                 No events today
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {todaysEvents.slice(0, 3).map((event) => (
-                  <div key={event.id} className="flex items-center gap-2">
+                  <div key={event.id} className="flex items-center gap-3">
                     <div
-                      className="h-6 w-0.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: event.color || "#0071e3" }}
+                      className="h-8 w-1 shrink-0 rounded-full"
+                      style={{ backgroundColor: event.color || "var(--accent)" }}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
                         {event.title}
                       </p>
                       {!event.allDay && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-2.5 w-2.5 text-foreground-quaternary" />
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3 text-foreground-quaternary" />
                           <p className="text-xs text-foreground-tertiary">
                             {formatEventTime(event.startTime)}
                           </p>
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
                   </div>
                 ))}
                 {todaysEvents.length > 3 && (
-                  <p className="text-xs text-foreground-tertiary">
+                  <p className="text-xs text-foreground-quaternary">
                     +{todaysEvents.length - 3} more
                   </p>
                 )}
@@ -155,19 +155,19 @@ export default async function DashboardPage() {
         {/* Tasks Widget */}
         <Link href="/tasks">
           <Card variant="interactive" className="col-span-1 h-full">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[--radius-md] bg-accent-light">
-                  <CheckSquare className="h-[18px] w-[18px] text-accent" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
+                  <CheckSquare className="h-5 w-5 text-accent" />
                 </div>
-                <h2 className="text-sm font-medium text-foreground-secondary">
+                <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
                   Tasks
                 </h2>
               </div>
               <ArrowRight className="h-4 w-4 text-foreground-quaternary" />
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-semibold tracking-tight">
+              <p className="text-3xl font-bold tracking-tight">
                 {activeTasks.length}
               </p>
               <p className="text-sm text-foreground-secondary">
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
                   : `active task${activeTasks.length !== 1 ? "s" : ""}`}
               </p>
               {completedToday.length > 0 && (
-                <p className="text-xs text-success">
+                <p className="text-xs font-medium text-success">
                   {completedToday.length} completed today
                 </p>
               )}
@@ -187,19 +187,19 @@ export default async function DashboardPage() {
         {/* Notes Widget */}
         <Link href="/notes">
           <Card variant="interactive" className="col-span-1 h-full">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[--radius-md] bg-accent-light">
-                  <FileText className="h-[18px] w-[18px] text-accent" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
+                  <FileText className="h-5 w-5 text-accent" />
                 </div>
-                <h2 className="text-sm font-medium text-foreground-secondary">
+                <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
                   Notes
                 </h2>
               </div>
               <ArrowRight className="h-4 w-4 text-foreground-quaternary" />
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-semibold tracking-tight">
+              <p className="text-3xl font-bold tracking-tight">
                 {notes.length}
               </p>
               <p className="text-sm text-foreground-secondary">
@@ -217,18 +217,18 @@ export default async function DashboardPage() {
         {/* Quick Chat Widget */}
         <Link href="/chat" className="md:col-span-2 lg:col-span-1">
           <Card variant="interactive" className="h-full">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[--radius-md] bg-accent-light">
-                  <MessageCircle className="h-[18px] w-[18px] text-accent" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
+                  <Sparkles className="h-5 w-5 text-accent" />
                 </div>
-                <h2 className="text-sm font-medium text-foreground-secondary">
+                <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
                   Ask Luma
                 </h2>
               </div>
               <ArrowRight className="h-4 w-4 text-foreground-quaternary" />
             </div>
-            <div className="flex h-10 items-center rounded-[--radius-md] border border-border bg-background px-4">
+            <div className="flex h-11 items-center rounded-[--radius-lg] border border-border-light bg-background px-4">
               <span className="text-sm text-foreground-quaternary">
                 What can I help you with?
               </span>
