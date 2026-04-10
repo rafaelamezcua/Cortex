@@ -2,8 +2,9 @@
 
 import { cn } from "@/lib/utils"
 import { addProjectTask, updateProjectTask, deleteProjectTask } from "@/lib/actions/projects"
-import { Check, Trash2, Plus, GripVertical } from "lucide-react"
+import { Check, Trash2, Plus, GripVertical, Clock } from "lucide-react"
 import { useState, useTransition } from "react"
+import { ProjectTaskModal } from "./project-task-modal"
 import {
   DndContext,
   DragOverlay,
@@ -22,6 +23,8 @@ type ProjectTask = {
   title: string
   description: string | null
   status: string
+  dueDate?: string | null
+  calendarId?: string | null
   order: number
 }
 
@@ -52,7 +55,7 @@ function DroppableColumn({ id, children }: { id: string; children: React.ReactNo
   )
 }
 
-function DraggableTaskCard({ task }: { task: ProjectTask }) {
+function DraggableTaskCard({ task, onClick }: { task: ProjectTask; onClick: () => void }) {
   const [isPending, startTransition] = useTransition()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
   const isDone = task.status === "done"
@@ -79,9 +82,19 @@ function DraggableTaskCard({ task }: { task: ProjectTask }) {
         >
           <GripVertical className="h-3.5 w-3.5" />
         </div>
-        <p className={cn("text-sm font-medium flex-1", isDone && "line-through text-foreground-tertiary")}>
-          {task.title}
-        </p>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
+          <p className={cn("text-sm font-medium", isDone && "line-through text-foreground-tertiary")}>
+            {task.title}
+          </p>
+          {task.dueDate && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <Clock className="h-2.5 w-2.5 text-foreground-quaternary" />
+              <span className="text-[11px] text-foreground-quaternary">
+                {new Date(task.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            </div>
+          )}
+        </div>
         <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           {!isDone && (
             <button
@@ -113,6 +126,7 @@ export function ProjectBoard({ projectId, projectColor, tasks }: ProjectBoardPro
   const [isPending, startTransition] = useTransition()
   const [newTaskCol, setNewTaskCol] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [editingTask, setEditingTask] = useState<ProjectTask | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -174,7 +188,7 @@ export function ProjectBoard({ projectId, projectColor, tasks }: ProjectBoardPro
 
               <DroppableColumn id={col.key}>
                 {columnTasks.map((task) => (
-                  <DraggableTaskCard key={task.id} task={task} />
+                  <DraggableTaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} />
                 ))}
 
                 {columnTasks.length === 0 && !newTaskCol && (
@@ -218,6 +232,14 @@ export function ProjectBoard({ projectId, projectColor, tasks }: ProjectBoardPro
           </div>
         )}
       </DragOverlay>
+
+      {editingTask && (
+        <ProjectTaskModal
+          task={editingTask}
+          projectColor={projectColor}
+          onClose={() => setEditingTask(null)}
+        />
+      )}
     </DndContext>
   )
 }

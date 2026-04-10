@@ -78,6 +78,8 @@ export const projectTasks = sqliteTable("project_tasks", {
   status: text("status", { enum: ["todo", "in_progress", "done"] })
     .notNull()
     .default("todo"),
+  dueDate: text("due_date"),
+  calendarId: text("calendar_id"),
   order: integer("order").notNull().default(0),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),

@@ -1,10 +1,12 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { projects, projectTasks } from "@/lib/schema"
+import { projects, projectTasks, calendarEvents } from "@/lib/schema"
 import { eq, desc } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
+import { createGoogleCalendarEvent } from "@/lib/integrations/google-calendar"
+import { isGoogleConnected } from "@/lib/integrations/google-auth"
 
 export async function createProject(formData: FormData) {
   const name = formData.get("name") as string
@@ -68,14 +70,71 @@ export async function addProjectTask(projectId: string, title: string) {
 
 export async function updateProjectTask(
   id: string,
-  data: { title?: string; status?: "todo" | "in_progress" | "done"; description?: string }
+  data: {
+    title?: string
+    status?: "todo" | "in_progress" | "done"
+    description?: string
+    dueDate?: string
+    calendarId?: string
+  }
 ) {
+  const task = await db.select().from(projectTasks).where(eq(projectTasks.id, id)).get()
+  if (!task) return
+
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() }
   if (data.title) updates.title = data.title
   if (data.status) updates.status = data.status
   if (data.description !== undefined) updates.description = data.description
+  if (data.dueDate !== undefined) updates.dueDate = data.dueDate || null
+  if (data.calendarId !== undefined) updates.calendarId = data.calendarId || null
 
   await db.update(projectTasks).set(updates).where(eq(projectTasks.id, id))
+
+  // Create calendar event if calendar assigned and due date set
+  if (data.calendarId && data.dueDate && data.calendarId !== task.calendarId) {
+    const now = new Date().toISOString()
+    const taskTitle = data.title || task.title
+    const startTime = `${data.dueDate}T09:00`
+    const endTime = `${data.dueDate}T10:00`
+
+    let googleEventId: string | null = null
+    const isGoogleCal = !data.calendarId.startsWith("local-")
+
+    if (isGoogleCal) {
+      const connected = await isGoogleConnected()
+      if (connected) {
+        try {
+          const gEvent = await createGoogleCalendarEvent({
+            title: taskTitle,
+            description: data.description || task.description || undefined,
+            startTime,
+            endTime,
+            calendarId: data.calendarId,
+          })
+          googleEventId = gEvent.id || null
+        } catch { /* fall back to local */ }
+      }
+    }
+
+    await db.insert(calendarEvents).values({
+      id: nanoid(),
+      title: taskTitle,
+      description: data.description || task.description || null,
+      notes: null,
+      startTime,
+      endTime,
+      allDay: false,
+      color: "#7986cb",
+      googleEventId,
+      googleCalendarId: isGoogleCal ? data.calendarId : null,
+      recurrence: null,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    revalidatePath("/calendar")
+  }
+
   revalidatePath("/projects")
 }
 

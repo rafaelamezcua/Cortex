@@ -80,6 +80,8 @@ sqlite.exec(`
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'todo',
+    due_date TEXT,
+    calendar_id TEXT,
     "order" INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -154,6 +156,12 @@ try {
 } catch { /* column already exists */ }
 try {
   sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN recurrence TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN due_date TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN calendar_id TEXT`)
 } catch { /* column already exists */ }
 
 export const db = drizzle(sqlite, { schema })
