@@ -4,10 +4,28 @@ import { getProjects, getProjectTasks } from "@/lib/actions/projects"
 import { ProjectCard } from "@/app/components/projects/project-card"
 import { ProjectForm } from "@/app/components/projects/project-form"
 
+function composeProjectsLine(
+  count: number,
+  totalTasks: number,
+  completedTasks: number
+): string {
+  if (count === 0) return "Nothing in flight yet. Start your first one."
+  const openTasks = totalTasks - completedTasks
+  if (totalTasks === 0) {
+    return count === 1
+      ? "One project, no tasks yet."
+      : `${count} projects, no tasks yet.`
+  }
+  const projLabel = count === 1 ? "project" : "projects"
+  if (openTasks === 0) {
+    return `${count} ${projLabel}, everything shipped. Nice.`
+  }
+  return `${count} ${projLabel} in flight, ${openTasks} open task${openTasks === 1 ? "" : "s"}.`
+}
+
 export default async function ProjectsPage() {
   const allProjects = await getProjects()
 
-  // Get task counts for each project
   const projectsWithStats = await Promise.all(
     allProjects.map(async (p) => {
       const tasks = await getProjectTasks(p.id)
@@ -19,21 +37,37 @@ export default async function ProjectsPage() {
     })
   )
 
+  const totalTasks = projectsWithStats.reduce((sum, p) => sum + p.totalTasks, 0)
+  const completedTasks = projectsWithStats.reduce(
+    (sum, p) => sum + p.completedTasks,
+    0
+  )
+  const projectsLine = composeProjectsLine(
+    projectsWithStats.length,
+    totalTasks,
+    completedTasks
+  )
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-        <p className="mt-1 text-sm text-foreground-secondary">
-          Track your projects and their progress.
+    <div className="space-y-8">
+      <section>
+        <h1
+          className="text-3xl font-medium tracking-tight"
+          style={{ fontFamily: "var(--font-fraunces)" }}
+        >
+          Projects
+        </h1>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-foreground-secondary">
+          {projectsLine}
         </p>
-      </div>
+      </section>
 
       <ProjectForm />
 
       {projectsWithStats.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
+        <div className="flex flex-col items-center justify-center rounded-[--radius-xl] border border-dashed border-border py-16">
           <p className="text-sm text-foreground-tertiary">
-            No projects yet. Create your first one above.
+            Create your first project above.
           </p>
         </div>
       ) : (

@@ -1,88 +1,280 @@
 @import "tailwindcss";
 
+/* ============================================================
+   HEARTH — Luma design system
+   Warm, calm, ambient. Apple-inspired but grounded.
+   Token set only. No component styles in this file.
+   ============================================================ */
+
 :root {
-  /* Backgrounds */
-  --background: #fbfbfd;
-  --background-secondary: #f2f2f7;
-  --background-tertiary: #e5e5ea;
-  --surface: #ffffff;
-  --surface-hover: #f5f5fa;
-  --surface-active: #ededf3;
+  /* ---------- Backgrounds (warm cream desk, ~89% luminance) ---------- */
+  --background: #ece5d2;
+  --background-secondary: #e4ddc8;
+  --background-tertiary: #dbd3bb;
 
-  /* Foreground / Text */
-  --foreground: #1d1d1f;
-  --foreground-secondary: #6e6e73;
-  --foreground-tertiary: #86868b;
-  --foreground-quaternary: #aeaeb2;
+  /* ---------- Surfaces (cream notecards, ~96% — clearly lifted) ---------- */
+  --surface: #fbf6e3;
+  --surface-raised: #fdf9ea;
+  --surface-floating: #fefbee;
+  --surface-hover: #e4ddc8;
+  --surface-active: #dbd3bb;
 
-  /* Accent — Periwinkle Purple */
-  --accent: #7986cb;
-  --accent-hover: #6872b8;
-  --accent-light: #edeffe;
-  --accent-subtle: rgba(121, 134, 203, 0.08);
+  /* Glass surfaces (translucent cream, not translucent white) */
+  --glass-surface: rgba(251, 246, 227, 0.72);
+  --glass-surface-raised: rgba(253, 249, 234, 0.85);
+  --glass-surface-floating: rgba(254, 251, 238, 0.92);
+  --glass-sidebar: rgba(228, 221, 200, 0.72);
 
-  /* Semantic */
-  --success: #34c759;
-  --warning: #ff9f0a;
-  --danger: #ff453a;
+  /* ---------- Foreground / Text (softer warm charcoal, ~12:1 contrast) ---------- */
+  --foreground: #2a241c;
+  --foreground-secondary: #615849;
+  --foreground-tertiary: #8a8075;
+  --foreground-quaternary: #b0a693;
 
-  /* Borders */
-  --border: #d1d1d6;
-  --border-light: #e5e5ea;
+  /* ---------- Accent — Hearth dusk gold ---------- */
+  --accent: #c99a5b;
+  --accent-hover: #b9884a;
+  --accent-active: #a67739;
+  --accent-light: rgba(201, 154, 91, 0.12);
+  --accent-subtle: rgba(201, 154, 91, 0.06);
+  --accent-ring: rgba(201, 154, 91, 0.35);
 
-  /* Sidebar */
-  --sidebar-width: 260px;
-  --sidebar-collapsed-width: 72px;
+  /* ---------- Luma aura (only for Luma-moments) ---------- */
+  /* Light mode: bright warm-white hotspot at center illuminates the logo,
+     fading through gold into the cream background. */
+  --luma-aura: radial-gradient(
+    circle farthest-side at center,
+    rgba(255, 245, 215, 0.75) 0%,
+    rgba(250, 230, 180, 0.50) 15%,
+    rgba(230, 190, 120, 0.25) 35%,
+    rgba(201, 154, 91, 0.10) 55%,
+    rgba(201, 154, 91, 0.04) 75%,
+    rgba(201, 154, 91, 0.01) 90%,
+    rgba(201, 154, 91, 0) 100%
+  );
+  --luma-aura-soft: radial-gradient(
+    circle farthest-side at center,
+    rgba(255, 245, 215, 0.32) 0%,
+    rgba(250, 230, 180, 0.20) 20%,
+    rgba(230, 190, 120, 0.10) 40%,
+    rgba(201, 154, 91, 0.04) 60%,
+    rgba(201, 154, 91, 0.01) 85%,
+    rgba(201, 154, 91, 0) 100%
+  );
+  --accent-glow: rgba(201, 154, 91, 0.45);
 
-  /* Radius */
+  /* ---------- Ambient background wash (slow, subtle) ---------- */
+  --gradient-ambient: linear-gradient(
+    180deg,
+    #ece5d2 0%,
+    #e4ddc8 100%
+  );
+  --gradient-raised: linear-gradient(
+    180deg,
+    rgba(253, 249, 234, 0.8) 0%,
+    rgba(251, 246, 227, 0.4) 100%
+  );
+
+  /* ---------- Semantic (warmed) ---------- */
+  --success: #7ea77e;
+  --warning: #d9a300;
+  --danger: #c85a4a;
+
+  /* ---------- Borders (warmer tones, tuned to new luminance) ---------- */
+  --border: #d6ccb4;
+  --border-light: #e0d7bf;
+  --border-strong: #c5b89a;
+
+  /* ---------- Radius ---------- */
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  /* ---------- Sidebar widths ---------- */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+
+  /* ---------- Blur scale ---------- */
+  --blur-sm: 8px;
+  --blur-md: 20px;
+  --blur-lg: 40px;
+  --blur-xl: 60px;
+
+  /* ---------- Shadows (deeper, darker color for visible elevation) ---------- */
+  --shadow-xs: 0 1px 2px rgba(25, 15, 5, 0.08);
+  --shadow-sm:
+    0 2px 4px rgba(25, 15, 5, 0.10),
+    0 4px 8px rgba(25, 15, 5, 0.08);
+  --shadow-md:
+    0 3px 6px rgba(25, 15, 5, 0.10),
+    0 12px 32px rgba(25, 15, 5, 0.14);
+  --shadow-lg:
+    0 6px 12px rgba(25, 15, 5, 0.12),
+    0 24px 56px rgba(25, 15, 5, 0.18);
+  --shadow-xl:
+    0 10px 20px rgba(25, 15, 5, 0.14),
+    0 40px 80px rgba(25, 15, 5, 0.22);
+  --shadow-hearth:
+    0 0 0 1.5px rgba(201, 154, 91, 0.55),
+    0 0 0 6px rgba(201, 154, 91, 0.08),
+    0 0 48px rgba(201, 154, 91, 0.35),
+    0 0 96px rgba(201, 154, 91, 0.18),
+    0 24px 56px rgba(95, 55, 15, 0.14);
+
+  /* ---------- Motion: duration scale ---------- */
+  --duration-instant: 120ms;
+  --duration-fast: 200ms;
+  --duration-normal: 320ms;
+  --duration-slow: 480ms;
+  --duration-ambient: 1200ms;
+
+  /* ---------- Motion: easing ---------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-ambient: cubic-bezier(0.45, 0, 0.55, 1);
+
+  /* ---------- Type scale (fluid with clamp) ---------- */
+  --text-xs: clamp(0.6875rem, 0.66rem + 0.15vw, 0.75rem);
+  --text-sm: clamp(0.8125rem, 0.79rem + 0.15vw, 0.875rem);
+  --text-base: clamp(0.9375rem, 0.92rem + 0.15vw, 1rem);
+  --text-lg: clamp(1.0625rem, 1.03rem + 0.2vw, 1.1875rem);
+  --text-xl: clamp(1.1875rem, 1.14rem + 0.3vw, 1.375rem);
+  --text-2xl: clamp(1.375rem, 1.3rem + 0.4vw, 1.625rem);
+  --text-3xl: clamp(1.625rem, 1.5rem + 0.6vw, 2rem);
+  --text-hero: clamp(2rem, 1.75rem + 1.2vw, 2.75rem);
+
+  /* ---------- Line heights ---------- */
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  /* ---------- Tracking ---------- */
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.06em;
 }
 
 .dark {
-  --background: #000000;
-  --background-secondary: #111113;
-  --background-tertiary: #1c1c1e;
-  --surface: #161618;
-  --surface-hover: #1e1e21;
-  --surface-active: #28282c;
+  /* ---------- Backgrounds (warm near-black, not pure black) ---------- */
+  --background: #161214;
+  --background-secondary: #1c1719;
+  --background-tertiary: #241e20;
 
-  --foreground: #f5f5f7;
-  --foreground-secondary: #98989f;
-  --foreground-tertiary: #78787e;
-  --foreground-quaternary: #48484a;
+  /* ---------- Surfaces ---------- */
+  --surface: #1e1a1c;
+  --surface-raised: #252023;
+  --surface-floating: #2d2729;
+  --surface-hover: #28232a;
+  --surface-active: #302a2c;
 
-  --accent: #9fa8da;
-  --accent-hover: #b3bae6;
-  --accent-light: rgba(159, 168, 218, 0.12);
-  --accent-subtle: rgba(159, 168, 218, 0.06);
+  /* Glass surfaces */
+  --glass-surface: rgba(30, 26, 28, 0.72);
+  --glass-surface-raised: rgba(37, 32, 35, 0.85);
+  --glass-surface-floating: rgba(45, 39, 41, 0.92);
+  --glass-sidebar: rgba(28, 23, 25, 0.72);
 
-  --success: #30d158;
-  --warning: #ffd60a;
-  --danger: #ff453a;
+  /* ---------- Foreground (warm cream on warm dark) ---------- */
+  --foreground: #f5efe4;
+  --foreground-secondary: #b5ac9e;
+  --foreground-tertiary: #887f72;
+  --foreground-quaternary: #5a5249;
 
-  --border: #2c2c2e;
-  --border-light: #1e1e21;
+  /* ---------- Accent — Hearth dusk gold (brighter for dark mode) ---------- */
+  --accent: #e4b87a;
+  --accent-hover: #eec390;
+  --accent-active: #d4a967;
+  --accent-light: rgba(228, 184, 122, 0.14);
+  --accent-subtle: rgba(228, 184, 122, 0.07);
+  --accent-ring: rgba(228, 184, 122, 0.4);
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
+  /* ---------- Luma aura (brighter in dark) ---------- */
+  --luma-aura: radial-gradient(
+    circle farthest-side at center,
+    rgba(228, 184, 122, 0.22) 0%,
+    rgba(228, 184, 122, 0.15) 20%,
+    rgba(228, 184, 122, 0.09) 40%,
+    rgba(228, 184, 122, 0.045) 60%,
+    rgba(228, 184, 122, 0.015) 80%,
+    rgba(228, 184, 122, 0) 100%
+  );
+  --luma-aura-soft: radial-gradient(
+    circle farthest-side at center,
+    rgba(228, 184, 122, 0.13) 0%,
+    rgba(228, 184, 122, 0.08) 25%,
+    rgba(228, 184, 122, 0.04) 50%,
+    rgba(228, 184, 122, 0.015) 75%,
+    rgba(228, 184, 122, 0) 100%
+  );
+  --accent-glow: rgba(228, 184, 122, 0.55);
+
+  /* ---------- Ambient background wash (dusk) ---------- */
+  --gradient-ambient: linear-gradient(
+    180deg,
+    #161214 0%,
+    #1a1517 100%
+  );
+  --gradient-raised: linear-gradient(
+    180deg,
+    rgba(45, 39, 41, 0.6) 0%,
+    rgba(30, 26, 28, 0.3) 100%
+  );
+
+  /* ---------- Semantic ---------- */
+  --success: #8ebd8e;
+  --warning: #ecc145;
+  --danger: #e07566;
+
+  /* ---------- Borders ---------- */
+  --border: #34292d;
+  --border-light: #2a2125;
+  --border-strong: #453639;
+
+  /* ---------- Shadows (deeper for dark mode) ---------- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm:
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md:
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-xl:
+    0 24px 56px rgba(0, 0, 0, 0.6),
+    0 12px 28px rgba(0, 0, 0, 0.4);
+  --shadow-hearth:
+    0 0 0 1px rgba(228, 184, 122, 0.1),
+    0 12px 40px rgba(228, 184, 122, 0.14);
 }
+
+/* ============================================================
+   Tailwind v4 theme wiring
+   Every token exposed as a Tailwind utility.
+   ============================================================ */
 
 @theme inline {
   --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
   --color-background-tertiary: var(--background-tertiary);
+
   --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-floating: var(--surface-floating);
   --color-surface-hover: var(--surface-hover);
   --color-surface-active: var(--surface-active);
+
+  --color-glass-surface: var(--glass-surface);
+  --color-glass-surface-raised: var(--glass-surface-raised);
+  --color-glass-surface-floating: var(--glass-surface-floating);
+  --color-glass-sidebar: var(--glass-sidebar);
 
   --color-foreground: var(--foreground);
   --color-foreground-secondary: var(--foreground-secondary);
@@ -91,6 +283,7 @@
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
   --color-accent-light: var(--accent-light);
   --color-accent-subtle: var(--accent-subtle);
 
@@ -100,46 +293,68 @@
 
   --color-border: var(--border);
   --color-border-light: var(--border-light);
+  --color-border-strong: var(--border-strong);
 
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+
+  --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
-/* Selection */
+/* ============================================================
+   Base
+   ============================================================ */
+
 ::selection {
   background: var(--accent);
-  color: white;
+  color: #fff;
 }
 
 body {
-  background: var(--background);
+  background: var(--gradient-ambient);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100svh;
 }
 
-/* Smooth theme transitions */
-*, *::before, *::after {
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+/* Theme-change transitions — scoped, not global, to avoid jank */
+html {
+  transition: background-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
 }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Scrollbar */
+/* Scrollbar — warmer, softer */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -148,30 +363,72 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--foreground-quaternary);
-  border-radius: 3px;
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--foreground-tertiary);
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
-/* Focus ring */
+/* Focus ring — uses accent ring token */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-ring);
   outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
-/* Luma thinking dance animation */
+/* ============================================================
+   Luma character animations
+   ============================================================ */
+
+/* Luma dance — thinking state, reserved for the assistant.
+   Gentle bob + sway + glow pulse, synchronized. */
 @keyframes luma-dance {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  15% { transform: rotate(-12deg) scale(1.05); }
-  30% { transform: rotate(10deg) scale(0.95); }
-  45% { transform: rotate(-8deg) scale(1.08); }
-  60% { transform: rotate(6deg) scale(1); }
-  75% { transform: rotate(-4deg) scale(1.03); }
-  90% { transform: rotate(2deg) scale(1); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    filter: drop-shadow(0 0 4px var(--accent-glow));
+  }
+  20% {
+    transform: translateY(-3px) rotate(-5deg) scale(1.04);
+    filter: drop-shadow(0 2px 10px var(--accent-glow));
+  }
+  40% {
+    transform: translateY(-1px) rotate(4deg) scale(1.02);
+    filter: drop-shadow(0 1px 8px var(--accent-glow));
+  }
+  60% {
+    transform: translateY(-4px) rotate(-3deg) scale(1.05);
+    filter: drop-shadow(0 3px 14px var(--accent-glow));
+  }
+  80% {
+    transform: translateY(-1px) rotate(2deg) scale(1.01);
+    filter: drop-shadow(0 1px 6px var(--accent-glow));
+  }
 }
 
 .animate-luma-dance {
-  animation: luma-dance 1.5s ease-in-out infinite;
+  animation: luma-dance 2.4s var(--ease-in-out) infinite;
+}
+
+/* Luma breathe — ambient idle state for the aura */
+@keyframes luma-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+.animate-luma-breathe {
+  animation: luma-breathe var(--duration-ambient) var(--ease-ambient) infinite;
+  animation-duration: 4.5s;
 }

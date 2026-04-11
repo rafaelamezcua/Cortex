@@ -34,7 +34,7 @@ export function TaskForm() {
   }, [isOpen])
 
   async function handleSubmit(formData: FormData) {
-    if (addToCalendar && selectedCalendar !== "local") {
+    if (addToCalendar) {
       formData.set("addToCalendar", "true")
       formData.set("calendarId", selectedCalendar)
     }
@@ -47,8 +47,9 @@ export function TaskForm() {
   if (!isOpen) {
     return (
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center gap-2 rounded-[--radius-lg] border border-dashed border-border px-4 py-3.5 text-sm text-foreground-tertiary transition-all duration-200 hover:border-accent hover:text-accent hover:bg-accent-subtle"
+        className="flex w-full items-center gap-2 rounded-[--radius-lg] border border-dashed border-border px-4 py-3.5 text-sm font-medium text-foreground-tertiary transition-all duration-200 ease-out hover:border-accent/60 hover:bg-accent-subtle hover:text-accent"
       >
         <Plus className="h-4 w-4" />
         Add task
@@ -60,18 +61,18 @@ export function TaskForm() {
     <form
       ref={formRef}
       action={handleSubmit}
-      className="space-y-4 rounded-[--radius-xl] border border-border-light/60 bg-surface p-5 shadow-sm"
+      className="space-y-4 rounded-[--radius-xl] border border-border-light bg-surface p-5 shadow-md"
     >
       <input
         name="title"
-        placeholder="Task name"
+        placeholder="What needs doing?"
         autoFocus
         required
-        className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
+        className="w-full bg-transparent text-[15px] font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
       />
       <textarea
         name="description"
-        placeholder="Description (optional)"
+        placeholder="Add a note (optional)"
         rows={2}
         className="w-full resize-none bg-transparent text-sm text-foreground-secondary outline-none placeholder:text-foreground-quaternary"
       />

@@ -81,28 +81,39 @@ export function EventPreview({ event, onClose, onEdit }: EventPreviewProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-      <div className="w-full max-w-sm rounded-[--radius-xl] border border-border-light/40 bg-surface/95 backdrop-blur-2xl shadow-lg overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-[--radius-2xl] border border-border-light bg-glass-surface-floating shadow-xl backdrop-blur-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Color bar */}
         <div
-          className="h-1.5"
+          className="h-2"
           style={{ backgroundColor: event.color || "var(--accent)" }}
         />
 
-        <div className="p-5">
+        <div className="p-6">
           {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-semibold text-foreground truncate">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h3
+                className="truncate text-[19px] font-semibold tracking-tight text-foreground"
+                style={{ fontFamily: "var(--font-fraunces)" }}
+              >
                 {event.title}
               </h3>
-              <p className="text-sm text-foreground-secondary mt-0.5">
+              <p className="mt-1 text-sm text-foreground-secondary">
                 {dateLabel}
               </p>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="shrink-0 ml-2 rounded-[--radius-sm] p-1 text-foreground-quaternary hover:bg-surface-hover hover:text-foreground transition-colors"
+              aria-label="Close"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -129,9 +140,11 @@ export function EventPreview({ event, onClose, onEdit }: EventPreviewProps) {
             )}
 
             {event.notes && (
-              <div className="rounded-[--radius-md] bg-accent-subtle p-3 mt-2">
-                <p className="text-xs font-medium text-foreground-tertiary mb-1">Notes</p>
-                <p className="text-sm text-foreground-secondary line-clamp-4">
+              <div className="mt-2 rounded-[--radius-lg] border border-accent/15 bg-accent-subtle p-3.5">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+                  Notes
+                </p>
+                <p className="text-sm leading-relaxed text-foreground-secondary line-clamp-4">
                   {event.notes}
                 </p>
               </div>
@@ -170,7 +183,7 @@ export function EventPreview({ event, onClose, onEdit }: EventPreviewProps) {
                     key={cal.id}
                     onClick={() => syncToGoogle(cal.id)}
                     disabled={syncing}
-                    className="flex w-full items-center gap-2.5 rounded-[--radius-md] px-3 py-2 text-sm transition-colors hover:bg-surface-hover disabled:opacity-50"
+                    className="flex w-full items-center gap-2.5 rounded-[--radius-lg] px-3 py-2 text-sm transition-colors duration-150 hover:bg-surface-hover disabled:opacity-50"
                   >
                     <div
                       className="h-3 w-3 rounded-full shrink-0"

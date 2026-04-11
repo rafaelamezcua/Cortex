@@ -156,7 +156,7 @@ export function CommandPalette() {
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={() => setOpen(false)}
       />
-      <div className="relative w-full max-w-lg rounded-[--radius-xl] border border-border-light/40 bg-surface/95 backdrop-blur-2xl shadow-lg overflow-hidden">
+      <div className="relative w-full max-w-lg rounded-[--radius-xl] border border-border-light bg-glass-surface-floating backdrop-blur-2xl shadow-lg overflow-hidden">
         <div className="flex items-center gap-3 border-b border-border-light/40 px-5">
           <Search className="h-4 w-4 shrink-0 text-foreground-quaternary" />
           <input

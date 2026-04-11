@@ -1,6 +1,8 @@
 "use client"
 
 import { saveJournalEntry } from "@/lib/actions/journal"
+import { attachJournalToVault } from "@/lib/actions/vault"
+import { VaultAttachButton } from "@/app/components/ui/vault-attach-button"
 import { cn } from "@/lib/utils"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState, useCallback, useRef } from "react"
@@ -50,7 +52,6 @@ export function JournalEditor({ initialEntry, initialDate }: JournalEditorProps)
     setMood(null)
     setSaveStatus("")
 
-    // Load entry for the new date
     fetch(`/api/journal?date=${newDate}`)
       .then((r) => r.json())
       .then((data) => {
@@ -63,8 +64,8 @@ export function JournalEditor({ initialEntry, initialDate }: JournalEditorProps)
   }
 
   const d = new Date(date + "T12:00:00")
-  const dateLabel = d.toLocaleDateString("en-US", {
-    weekday: "long",
+  const weekday = d.toLocaleDateString("en-US", { weekday: "long" })
+  const monthDay = d.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -77,54 +78,82 @@ export function JournalEditor({ initialEntry, initialDate }: JournalEditorProps)
   return (
     <div className="space-y-6">
       {/* Date navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <button
+          type="button"
           onClick={() => changeDate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary hover:bg-surface-hover transition-colors"
+          aria-label="Previous day"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-foreground-tertiary transition-all duration-150 hover:bg-surface-hover hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <div className="text-center">
-          <p className="text-sm font-semibold text-foreground">{dateLabel}</p>
-          {isToday && <p className="text-xs text-accent">Today</p>}
+        <div className="flex-1 text-center">
+          <p
+            className="text-[22px] font-normal tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            {weekday}
+          </p>
+          <p className="mt-0.5 text-xs text-foreground-tertiary">
+            {monthDay}
+            {isToday && <span className="ml-1.5 text-accent">· Today</span>}
+          </p>
         </div>
         <button
+          type="button"
           onClick={() => changeDate(1)}
           disabled={isToday}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary hover:bg-surface-hover transition-colors disabled:opacity-30"
+          aria-label="Next day"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-foreground-tertiary transition-all duration-150 hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       {/* Mood picker */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-1">
         {moods.map((m) => (
           <button
             key={m.value}
+            type="button"
             onClick={() => {
               setMood(m.value)
               debouncedSave(content, m.value)
             }}
+            aria-label={`Mood: ${m.label}`}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-[--radius-lg] px-3 py-2 transition-all duration-200",
+              "flex flex-col items-center gap-1 rounded-[--radius-lg] px-3 py-2 transition-all duration-200 ease-out",
               mood === m.value
-                ? "bg-accent-light scale-110"
-                : "hover:bg-surface-hover"
+                ? "bg-accent-subtle scale-110"
+                : "opacity-70 hover:bg-surface-hover hover:opacity-100"
             )}
           >
             <span className="text-2xl">{m.emoji}</span>
-            <span className="text-[10px] font-medium text-foreground-tertiary">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-foreground-tertiary">
               {m.label}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Editor */}
+      {/* Editor — paper surface */}
       <div className="relative">
-        <div className="flex justify-end mb-2">
-          <span className="text-xs text-foreground-quaternary">{saveStatus}</span>
+        <div className="mb-2 flex items-center justify-between">
+          <VaultAttachButton
+            onAttach={() => attachJournalToVault(date)}
+            label="Save to Obsidian"
+          />
+          <span
+            className={cn(
+              "text-xs italic transition-opacity duration-200",
+              saveStatus ? "opacity-100" : "opacity-0",
+              saveStatus === "Saving..."
+                ? "text-foreground-quaternary"
+                : "text-success"
+            )}
+          >
+            {saveStatus}
+          </span>
         </div>
         <textarea
           value={content}
@@ -132,8 +161,18 @@ export function JournalEditor({ initialEntry, initialDate }: JournalEditorProps)
             setContent(e.target.value)
             debouncedSave(e.target.value, mood || undefined)
           }}
-          placeholder={isToday ? "How was your day? What happened? What are you grateful for?" : "Add a note about this day..."}
-          className="min-h-[300px] w-full resize-none rounded-[--radius-xl] border border-border-light/60 bg-surface p-6 text-sm leading-relaxed text-foreground outline-none placeholder:text-foreground-quaternary focus:border-accent shadow-sm"
+          placeholder={
+            isToday
+              ? "How was your day? What happened? What are you grateful for?"
+              : "Add a note about this day..."
+          }
+          className={cn(
+            "min-h-[360px] w-full resize-none rounded-[--radius-xl] border border-border-light bg-surface-raised p-8",
+            "text-[16px] leading-[1.7] text-foreground shadow-md",
+            "outline-none transition-all duration-200 ease-out",
+            "placeholder:italic placeholder:text-foreground-quaternary",
+            "focus:border-accent/40 focus:shadow-lg"
+          )}
         />
       </div>
     </div>

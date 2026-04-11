@@ -24,44 +24,61 @@ export function ProjectCard({ project }: ProjectCardProps) {
     project.totalTasks > 0
       ? Math.round((project.completedTasks / project.totalTasks) * 100)
       : 0
+  const isShipped = project.totalTasks > 0 && progress === 100
 
   return (
-    <div className={cn("group relative", isPending && "opacity-50")}>
+    <div className={cn("group relative", isPending && "pointer-events-none opacity-50")}>
       <Link href={`/projects/${project.id}`}>
-        <div className="rounded-[--radius-xl] border border-border-light/60 bg-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-accent/20 cursor-pointer">
+        <div
+          className={cn(
+            "cursor-pointer rounded-[--radius-xl] border border-border-light bg-surface p-5 shadow-sm",
+            "transition-all duration-300 ease-out",
+            "hover:-translate-y-0.5 hover:border-accent/30 hover:bg-surface-raised hover:shadow-md",
+            "active:translate-y-0"
+          )}
+        >
           {/* Header */}
-          <div className="flex items-center gap-3 mb-3">
+          <div className="mb-4 flex items-center gap-3">
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[--radius-md] text-white shadow-sm"
               style={{ backgroundColor: project.color }}
             >
               <Folder className="h-5 w-5" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-foreground truncate">
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-[15px] font-semibold text-foreground">
                 {project.name}
               </h3>
               {project.description && (
-                <p className="text-xs text-foreground-tertiary truncate">
+                <p className="truncate text-xs text-foreground-tertiary">
                   {project.description}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Progress bar */}
+          {/* Progress */}
           <div className="space-y-1.5">
-            <div className="flex justify-between text-[11px]">
-              <span className="text-foreground-tertiary">
-                {project.completedTasks}/{project.totalTasks} tasks
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-foreground-quaternary">
+                {project.totalTasks === 0
+                  ? "No tasks yet"
+                  : `${project.completedTasks} of ${project.totalTasks} done`}
               </span>
-              <span className="font-medium text-foreground-secondary">
-                {progress}%
-              </span>
+              {project.totalTasks > 0 && (
+                <span
+                  className={cn(
+                    "text-xs font-semibold tabular-nums",
+                    isShipped ? "text-success" : "text-foreground-secondary"
+                  )}
+                >
+                  {progress}%
+                </span>
+              )}
             </div>
-            <div className="h-1.5 w-full rounded-full bg-background-tertiary overflow-hidden">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-background-tertiary">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-500 ease-out"
                 style={{
                   width: `${progress}%`,
                   backgroundColor: project.color,
@@ -74,13 +91,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
       {/* Delete */}
       <button
+        type="button"
         onClick={(e) => {
           e.preventDefault()
           if (confirm("Delete this project and all its tasks?")) {
             startTransition(() => deleteProject(project.id))
           }
         }}
-        className="absolute top-3 right-3 rounded-[--radius-sm] p-1.5 text-foreground-quaternary opacity-0 group-hover:opacity-100 transition-all hover:bg-danger/10 hover:text-danger"
+        aria-label="Delete project"
+        className="absolute right-3 top-3 rounded-[--radius-sm] p-1.5 text-foreground-quaternary opacity-0 transition-all duration-150 hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>

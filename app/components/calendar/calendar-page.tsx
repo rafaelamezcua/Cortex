@@ -4,13 +4,18 @@ import { CalendarView } from "./calendar-view"
 
 export function CalendarPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
-        <p className="mt-1 text-sm text-foreground-secondary">
-          Manage your schedule.
+    <div className="space-y-8">
+      <section>
+        <h1
+          className="text-3xl font-medium tracking-tight"
+          style={{ fontFamily: "var(--font-fraunces)" }}
+        >
+          Calendar
+        </h1>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-foreground-secondary">
+          Your month, laid out plainly. Click any day to see what&apos;s there.
         </p>
-      </div>
+      </section>
 
       <CalendarView initialEvents={[]} />
     </div>

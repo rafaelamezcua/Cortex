@@ -52,17 +52,24 @@ function saveCalState(state: { year: number; month: number; selectedDate: string
 }
 
 export function CalendarView({ initialEvents }: CalendarViewProps) {
-  const now = new Date()
-  const saved = loadCalState()
+  // Neutral defaults — hydrated with real date/localStorage in useEffect below
+  // to avoid SSR/client mismatch when the server clock differs from the client
+  // (e.g. date rolls over between server render and client hydration).
+  const [mounted, setMounted] = useState(false)
+  const [year, setYearRaw] = useState(2026)
+  const [month, setMonthRaw] = useState(0)
+  const [selectedDate, setSelectedDateRaw] = useState<string | null>(null)
+  const [viewMode, setViewModeRaw] = useState<ViewMode>("month")
 
-  const [year, setYearRaw] = useState(saved?.year ?? now.getFullYear())
-  const [month, setMonthRaw] = useState(saved?.month ?? now.getMonth())
-  const [selectedDate, setSelectedDateRaw] = useState<string | null>(
-    saved?.selectedDate ?? formatDateKey(now)
-  )
-  const [viewMode, setViewModeRaw] = useState<ViewMode>(
-    (saved?.viewMode as ViewMode) ?? "month"
-  )
+  useEffect(() => {
+    const now = new Date()
+    const saved = loadCalState()
+    setYearRaw(saved?.year ?? now.getFullYear())
+    setMonthRaw(saved?.month ?? now.getMonth())
+    setSelectedDateRaw(saved?.selectedDate ?? formatDateKey(now))
+    setViewModeRaw((saved?.viewMode as ViewMode) ?? "month")
+    setMounted(true)
+  }, [])
 
   // Wrapped setters that persist to localStorage
   function setYear(y: number) { setYearRaw(y); saveCalState({ year: y, month, selectedDate, viewMode }) }
@@ -91,6 +98,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
 
   // Fetch Google Calendar list — only add NEW calendars, respect saved preferences
   useEffect(() => {
+    if (!mounted) return
     fetch("/api/calendars")
       .then((r) => r.json())
       .then((data) => {
@@ -113,9 +121,11 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
         }
       })
       .catch(() => {})
-  }, [])
+  }, [mounted])
 
-  // Fetch events
+  // Fetch events — gated on `mounted` to prevent stale fetches with the
+  // dummy pre-mount year/month values (which would race with the real fetch
+  // and sometimes overwrite real events with empty results).
   const fetchEvents = useCallback(() => {
     const start = `${year}-${String(month + 1).padStart(2, "0")}-01T00:00:00`
     const lastDay = new Date(year, month + 1, 0).getDate()
@@ -128,12 +138,14 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
   }, [year, month])
 
   useEffect(() => {
+    if (!mounted) return
     fetchEvents()
-  }, [fetchEvents])
+  }, [fetchEvents, mounted])
 
   useEffect(() => {
+    if (!mounted) return
     if (!showForm && !editingEvent) fetchEvents()
-  }, [showForm, editingEvent, fetchEvents])
+  }, [showForm, editingEvent, fetchEvents, mounted])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -277,6 +289,14 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
       ? `${getMonthName(month)} ${year}`
       : `${getMonthName(month)} ${year}`
 
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center rounded-[--radius-2xl] border border-border-light bg-surface py-20 shadow-sm">
+        <p className="text-sm text-foreground-tertiary">Loading calendar...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex gap-6 -mx-4 sm:-mx-8">
       {/* Left sidebar */}
@@ -319,28 +339,36 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
       <div className="flex-1 min-w-0 pr-4 sm:pr-8">
         <div className="space-y-5">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2
+                className="text-[22px] font-medium tracking-tight text-foreground"
+                style={{ fontFamily: "var(--font-fraunces)" }}
+              >
                 {headerLabel}
               </h2>
               <div className="flex items-center gap-0.5">
                 <button
+                  type="button"
                   onClick={prevPeriod}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary transition-colors hover:bg-surface-hover"
+                  aria-label="Previous period"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-foreground-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
+                  type="button"
                   onClick={nextPeriod}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-secondary transition-colors hover:bg-surface-hover"
+                  aria-label="Next period"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-foreground-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
               <button
+                type="button"
                 onClick={goToToday}
-                className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-hover"
+                className="rounded-full border border-border px-3.5 py-1.5 text-xs font-medium text-foreground-secondary transition-all duration-150 ease-out hover:border-accent/60 hover:bg-accent-subtle hover:text-accent"
               >
                 Today
               </button>
@@ -348,40 +376,46 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
 
             <div className="flex items-center gap-2">
               {/* View switcher */}
-              <div className="flex rounded-[--radius-md] border border-border-light bg-background-secondary p-0.5">
+              <div className="flex rounded-full border border-border-light bg-surface p-1 shadow-sm">
                 <button
+                  type="button"
                   onClick={() => changeViewMode("month")}
+                  title="Month view (M)"
+                  aria-label="Month view"
                   className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ease-out",
                     viewMode === "month"
-                      ? "bg-surface text-foreground shadow-sm"
+                      ? "bg-accent text-white shadow-sm"
                       : "text-foreground-tertiary hover:text-foreground"
                   )}
-                  title="Month view (M)"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => changeViewMode("week")}
+                  title="Week view (W)"
+                  aria-label="Week view"
                   className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ease-out",
                     viewMode === "week"
-                      ? "bg-surface text-foreground shadow-sm"
+                      ? "bg-accent text-white shadow-sm"
                       : "text-foreground-tertiary hover:text-foreground"
                   )}
-                  title="Week view (W)"
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => changeViewMode("agenda")}
+                  title="Agenda view (A)"
+                  aria-label="Agenda view"
                   className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-[--radius-sm] transition-colors",
+                    "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ease-out",
                     viewMode === "agenda"
-                      ? "bg-surface text-foreground shadow-sm"
+                      ? "bg-accent text-white shadow-sm"
                       : "text-foreground-tertiary hover:text-foreground"
                   )}
-                  title="Agenda view (A)"
                 >
                   <Rows3 className="h-3.5 w-3.5" />
                 </button>
@@ -389,14 +423,14 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
 
               <Button size="sm" onClick={handleNewEvent}>
                 <Plus className="h-4 w-4" />
-                New Event
+                New event
               </Button>
             </div>
           </div>
 
           {/* Conflict warnings */}
           {conflicts.length > 0 && (
-            <div className="rounded-[--radius-md] border border-warning/30 bg-warning/5 px-4 py-2.5">
+            <div className="rounded-[--radius-lg] border border-warning/30 bg-warning/5 px-4 py-2.5">
               <p className="text-xs font-medium text-warning">
                 Schedule conflict: {conflicts[0]}
                 {conflicts.length > 1 && ` (+${conflicts.length - 1} more)`}
@@ -415,7 +449,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                 onSelectDate={setSelectedDate}
               />
               {selectedDate && (
-                <div className="rounded-[--radius-xl] border border-border-light/60 bg-surface p-5 shadow-sm">
+                <div className="rounded-[--radius-2xl] border border-border-light bg-surface p-5 shadow-md">
                   <DayView
                     date={selectedDate}
                     events={selectedEvents}
@@ -466,12 +500,13 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                           {label}
                         </p>
                       </div>
-                      <div className="flex-1 space-y-1.5">
+                      <div className="flex-1 space-y-2">
                         {dayEvents.map((event) => (
                           <button
                             key={event.id}
+                            type="button"
                             onClick={() => handleEventClick(event)}
-                            className="flex w-full items-center gap-3 rounded-[--radius-lg] border border-border-light/60 bg-surface p-3 text-left transition-all duration-200 hover:shadow-sm hover:border-accent/20"
+                            className="group flex w-full items-center gap-3 rounded-[--radius-lg] border border-border-light bg-surface p-3 text-left shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-accent/30 hover:bg-surface-raised hover:shadow-md active:translate-y-0"
                           >
                             <div
                               className="h-8 w-1 shrink-0 rounded-full"

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import { type HTMLAttributes, forwardRef } from "react"
 
-type CardVariant = "default" | "interactive" | "ghost"
+type CardVariant = "default" | "interactive" | "glass" | "hearth" | "ghost"
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: CardVariant
@@ -9,9 +9,13 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 const variantStyles: Record<CardVariant, string> = {
   default:
-    "bg-surface border border-border-light/60 shadow-sm backdrop-blur-sm",
+    "bg-surface border border-border-light shadow-sm",
   interactive:
-    "bg-surface border border-border-light/60 shadow-sm backdrop-blur-sm cursor-pointer hover:shadow-md hover:border-accent/20 hover:scale-[1.01] active:scale-[0.99]",
+    "bg-surface border border-border-light shadow-sm cursor-pointer hover:bg-surface-raised hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]",
+  glass:
+    "bg-glass-surface backdrop-blur-xl border border-border-light shadow-sm",
+  hearth:
+    "bg-surface border border-accent/25 shadow-[var(--shadow-hearth)]",
   ghost: "bg-transparent",
 }
 
@@ -21,7 +25,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-[--radius-xl] p-6 transition-all duration-200",
+          "rounded-[--radius-xl] p-6 transition-all duration-300 ease-out",
           variantStyles[variant],
           className
         )}

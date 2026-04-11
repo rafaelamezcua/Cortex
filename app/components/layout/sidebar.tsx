@@ -18,7 +18,7 @@ import {
   FolderKanban,
   Timer,
 } from "lucide-react"
-import Image from "next/image"
+import { LumaLogo } from "@/app/components/ui/luma-logo"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -33,6 +33,7 @@ const navItems = [
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/habits", label: "Habits", icon: Flame },
   { href: "/focus", label: "Focus", icon: Timer },
+  { href: "/journal", label: "Journal", icon: BookOpen },
 ]
 
 export function Sidebar() {
@@ -57,28 +58,40 @@ export function Sidebar() {
 
   const sidebarContent = (
     <>
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-between px-5">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/luma-logo.svg"
-            alt="Luma"
-            width={36}
-            height={36}
-            className="shrink-0"
-          />
-          {!collapsed && (
-            <span className="text-[17px] font-semibold tracking-tight text-foreground">
-              Luma
-            </span>
-          )}
-        </div>
+      {/* Logo + wordmark with Luma aura */}
+      <div className="relative flex flex-col items-center px-5 pt-7 pb-5">
+        {/* Mobile close button, top-right */}
         <button
           onClick={() => setMobileOpen(false)}
-          className="flex h-8 w-8 items-center justify-center rounded-[--radius-sm] text-foreground-tertiary hover:bg-surface-hover md:hidden"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-[--radius-sm] text-foreground-tertiary transition-colors duration-200 hover:bg-surface-hover hover:text-foreground md:hidden"
+          aria-label="Close menu"
         >
           <X className="h-4 w-4" />
         </button>
+
+        {/* Aura glow behind logo */}
+        <div className="relative flex items-center justify-center">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-4 animate-luma-breathe"
+            style={{ backgroundImage: "var(--luma-aura)" }}
+          />
+          <LumaLogo
+            size={collapsed ? 48 : 72}
+            className="relative shrink-0 text-foreground drop-shadow-sm"
+            aria-label="Luma"
+          />
+        </div>
+
+        {/* Wordmark */}
+        {!collapsed && (
+          <span
+            className="mt-3 font-display text-[1.5rem] font-medium tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            Luma
+          </span>
+        )}
       </div>
 
       {/* Navigation */}
@@ -145,7 +158,7 @@ export function Sidebar() {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-surface/80 backdrop-blur-xl border border-border-light/50 shadow-md md:hidden"
+        className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-glass-surface-floating backdrop-blur-xl border border-border-light shadow-md transition-colors duration-150 ease-out hover:bg-surface-hover md:hidden"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5 text-foreground" />
@@ -162,7 +175,7 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[--sidebar-width] flex-col bg-background-secondary/80 backdrop-blur-2xl border-r border-border-light/30 transition-transform duration-300 ease-in-out md:hidden",
+          "fixed inset-y-0 left-0 z-50 flex w-[--sidebar-width] flex-col bg-glass-sidebar backdrop-blur-2xl border-r border-border-light/40 transition-transform duration-300 ease-out md:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -172,7 +185,7 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden h-full flex-col border-r border-border-light/30 bg-background-secondary/60 backdrop-blur-2xl transition-all duration-300 ease-in-out md:flex",
+          "hidden h-full flex-col border-r border-border-light/40 bg-glass-sidebar backdrop-blur-2xl transition-all duration-300 ease-out md:flex",
           collapsed ? "w-[--sidebar-collapsed-width]" : "w-[--sidebar-width]"
         )}
       >

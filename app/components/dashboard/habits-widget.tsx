@@ -1,7 +1,8 @@
 "use client"
 
 import { Card } from "@/app/components/ui/card"
-import { Flame, Check, Plus, ArrowRight } from "lucide-react"
+import { WidgetHeader } from "@/app/components/ui/widget-header"
+import { Flame, Check } from "lucide-react"
 import { logHabit, unlogHabit } from "@/lib/actions/habits"
 import { useTransition } from "react"
 import { cn } from "@/lib/utils"
@@ -34,17 +35,7 @@ export function HabitsWidget({ habits, todayLogs, todayStr }: HabitsWidgetProps)
     return (
       <Link href="/habits">
         <Card variant="interactive" className="col-span-1 h-full">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
-                <Flame className="h-5 w-5 text-accent" />
-              </div>
-              <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
-                Habits
-              </h2>
-            </div>
-            <ArrowRight className="h-4 w-4 text-foreground-quaternary" />
-          </div>
+          <WidgetHeader icon={Flame} label="Habits" showArrow />
           <p className="text-sm text-foreground-tertiary">Start tracking habits</p>
         </Card>
       </Link>
@@ -62,24 +53,12 @@ export function HabitsWidget({ habits, todayLogs, todayStr }: HabitsWidgetProps)
 
   return (
     <Card className="col-span-1">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
-            <Flame className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
-              Habits
-            </h2>
-            <p className="text-xs text-foreground-quaternary">
-              {completed}/{habits.length} today
-            </p>
-          </div>
-        </div>
-        <Link href="/habits">
-          <ArrowRight className="h-4 w-4 text-foreground-quaternary hover:text-accent transition-colors" />
-        </Link>
-      </div>
+      <WidgetHeader
+        icon={Flame}
+        label="Habits"
+        subtitle={`${completed}/${habits.length} today`}
+        arrowHref="/habits"
+      />
 
       <div className="space-y-2">
         {habits.slice(0, 4).map((habit) => {

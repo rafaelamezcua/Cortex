@@ -72,11 +72,11 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
 
   if (habits.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-light mb-4">
+      <div className="flex flex-col items-center justify-center rounded-[--radius-xl] border border-dashed border-border py-16 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent-light">
           <Flame className="h-7 w-7 text-accent" />
         </div>
-        <p className="text-sm text-foreground-tertiary mb-1">
+        <p className="mb-1 text-sm font-medium text-foreground-secondary">
           No habits tracked yet
         </p>
         <p className="text-xs text-foreground-quaternary">
@@ -96,38 +96,58 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
         return (
           <div
             key={habit.id}
-            className="rounded-[--radius-xl] border border-border-light/60 bg-surface p-5 shadow-sm"
+            className={cn(
+              "group rounded-[--radius-xl] border border-border-light bg-surface p-5 shadow-sm",
+              "transition-all duration-300 ease-out",
+              "hover:border-accent/25 hover:bg-surface-raised hover:shadow-md"
+            )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex min-w-0 items-center gap-3">
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] text-white text-lg"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[--radius-md] text-lg text-white shadow-sm"
                   style={{ backgroundColor: habit.color }}
                 >
                   {habit.icon || habit.name.charAt(0)}
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">
+                <div className="min-w-0">
+                  <h3 className="truncate text-[15px] font-semibold text-foreground">
                     {habit.name}
                   </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {streak > 0 && (
-                      <span className="flex items-center gap-1 text-xs font-medium text-warning">
+                  <div className="mt-0.5 flex items-center gap-2 text-xs">
+                    {streak > 0 ? (
+                      <span className="flex items-center gap-1 font-medium text-warning">
                         <Flame className="h-3 w-3" />
                         {streak} day streak
                       </span>
+                    ) : (
+                      <span className="font-medium text-foreground-quaternary">
+                        No streak yet
+                      </span>
                     )}
-                    <span className="text-xs text-foreground-quaternary capitalize">
+                    <span className="text-foreground-quaternary">·</span>
+                    <span className="capitalize text-foreground-quaternary">
                       {habit.frequency}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Today's toggle */}
+              <div className="flex items-center gap-1">
+                {/* Delete button — hover reveal */}
                 <button
+                  type="button"
+                  onClick={() => startTransition(() => deleteHabit(habit.id))}
+                  aria-label="Delete habit"
+                  className="rounded-[--radius-sm] p-1.5 text-foreground-quaternary opacity-0 transition-all duration-150 hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Today's toggle — the ring */}
+                <button
+                  type="button"
                   onClick={() =>
                     startTransition(() => {
                       if (completed) {
@@ -138,25 +158,19 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
                     })
                   }
                   disabled={isPending}
+                  aria-label={completed ? "Mark today incomplete" : "Log for today"}
                   className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-200",
+                    "flex h-11 w-11 items-center justify-center rounded-full border-2 transition-all duration-200",
                     completed
-                      ? "border-success bg-success text-white"
-                      : "border-foreground-quaternary hover:border-accent hover:bg-accent/5"
+                      ? "border-success bg-success text-white shadow-sm"
+                      : "border-foreground-quaternary hover:border-accent hover:bg-accent/10 active:scale-95"
                   )}
                 >
                   {completed ? (
-                    <Check className="h-5 w-5" />
+                    <Check className="h-5 w-5" strokeWidth={3} />
                   ) : (
-                    <Plus className="h-5 w-5 text-foreground-quaternary" />
+                    <Plus className="h-5 w-5 text-foreground-tertiary" />
                   )}
-                </button>
-
-                <button
-                  onClick={() => startTransition(() => deleteHabit(habit.id))}
-                  className="rounded-[--radius-sm] p-1.5 text-foreground-quaternary opacity-0 hover:bg-danger/10 hover:text-danger transition-all group-hover:opacity-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -170,6 +184,7 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
                 return (
                   <button
                     key={day}
+                    type="button"
                     onClick={() =>
                       startTransition(() => {
                         if (count > 0) {
@@ -180,19 +195,14 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
                       })
                     }
                     disabled={isPending}
+                    title={`${day}${count > 0 ? `, ${count}x` : ""}`}
                     className={cn(
-                      "h-4 flex-1 rounded-[3px] transition-all duration-150",
-                      isToday && "ring-1 ring-accent ring-offset-1 ring-offset-surface",
-                      count > 0
-                        ? "opacity-100"
-                        : "bg-background-tertiary opacity-40"
+                      "h-5 flex-1 rounded-[4px] transition-all duration-150 hover:scale-y-110 hover:opacity-100",
+                      isToday &&
+                        "ring-2 ring-accent ring-offset-2 ring-offset-surface",
+                      count > 0 ? "opacity-100" : "bg-background-tertiary opacity-50"
                     )}
-                    style={
-                      count > 0
-                        ? { backgroundColor: habit.color }
-                        : undefined
-                    }
-                    title={`${day}${count > 0 ? ` — ${count}x` : ""}`}
+                    style={count > 0 ? { backgroundColor: habit.color } : undefined}
                   />
                 )
               })}

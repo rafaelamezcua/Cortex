@@ -1,5 +1,6 @@
 import { ChatContainer } from "@/app/components/chat/chat-container"
 import { ConversationList } from "@/app/components/chat/conversation-list"
+import { ChatLayout } from "@/app/components/chat/chat-layout"
 import { getConversations, getMessages } from "@/lib/actions/chat"
 import { db } from "@/lib/db"
 import { conversations } from "@/lib/schema"
@@ -45,27 +46,17 @@ export default async function ChatPage({
   }))
 
   return (
-    <div className="flex gap-6 -mx-8 -my-8 h-[calc(100vh)]">
-      {/* Conversation sidebar */}
-      <div className="w-56 shrink-0 border-r border-border-light bg-background-secondary p-4 overflow-y-auto">
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-foreground-quaternary">
-          Conversations
-        </h2>
-        <ConversationList
-          conversations={convos}
-          activeId={activeId}
+    <ChatLayout
+      sidebar={
+        <ConversationList conversations={convos} activeId={activeId} />
+      }
+    >
+      {activeId && (
+        <ChatContainer
+          conversationId={activeId}
+          initialMessages={initialMessages}
         />
-      </div>
-
-      {/* Chat area */}
-      <div className="flex-1 px-8 py-8 max-w-3xl">
-        {activeId && (
-          <ChatContainer
-            conversationId={activeId}
-            initialMessages={initialMessages}
-          />
-        )}
-      </div>
-    </div>
+      )}
+    </ChatLayout>
   )
 }

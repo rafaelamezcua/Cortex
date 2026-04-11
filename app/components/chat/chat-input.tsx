@@ -1,8 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { ArrowUp, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react"
-import { type FormEvent, useRef, useState } from "react"
+import { ArrowUp, Paperclip, X, FileText } from "lucide-react"
+import { type FormEvent, useRef } from "react"
 
 interface FileAttachment {
   file: File
@@ -108,7 +108,13 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="relative">
+      <div
+        className={cn(
+          "relative rounded-[--radius-2xl] border border-border bg-surface shadow-sm",
+          "transition-all duration-200 ease-out",
+          "focus-within:border-accent/60 focus-within:shadow-md"
+        )}
+      >
         <textarea
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
@@ -122,13 +128,11 @@ export function ChatInput({
               }
             }
           }}
-          placeholder="Message Luma... (paste images or attach files)"
+          placeholder="Tell Luma what's on your mind"
           rows={1}
           className={cn(
-            "w-full resize-none rounded-[--radius-lg] border border-border bg-surface py-3 pl-11 pr-12 text-sm text-foreground",
-            "outline-none transition-colors duration-150",
-            "placeholder:text-foreground-quaternary",
-            "focus:border-accent focus:ring-2 focus:ring-accent/20"
+            "w-full resize-none bg-transparent py-4 pl-14 pr-14 text-[15px] leading-relaxed text-foreground",
+            "outline-none placeholder:text-foreground-quaternary"
           )}
         />
 
@@ -136,9 +140,10 @@ export function ChatInput({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="absolute bottom-2.5 left-2.5 flex h-7 w-7 items-center justify-center rounded-[--radius-sm] text-foreground-quaternary transition-colors hover:text-accent hover:bg-accent-light"
+          aria-label="Attach file"
+          className="absolute bottom-3 left-3 flex h-9 w-9 items-center justify-center rounded-[--radius-md] text-foreground-tertiary transition-colors duration-150 hover:bg-accent-subtle hover:text-accent"
         >
-          <Paperclip className="h-4 w-4" />
+          <Paperclip className="h-[18px] w-[18px]" />
         </button>
 
         {/* Hidden file input */}
@@ -155,15 +160,15 @@ export function ChatInput({
         <button
           type="submit"
           disabled={!hasContent || isLoading}
+          aria-label="Send message"
           className={cn(
-            "absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-[--radius-md] transition-colors duration-150",
+            "absolute bottom-2.5 right-2.5 flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 ease-out",
             hasContent && !isLoading
-              ? "bg-accent text-white hover:bg-accent-hover"
+              ? "bg-accent text-white shadow-sm hover:bg-accent-hover hover:shadow-md active:scale-[0.96]"
               : "bg-background-tertiary text-foreground-quaternary"
           )}
-          aria-label="Send message"
         >
-          <ArrowUp className="h-4 w-4" />
+          <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.5} />
         </button>
       </div>
     </form>

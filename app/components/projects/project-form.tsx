@@ -19,8 +19,9 @@ export function ProjectForm() {
   if (!isOpen) {
     return (
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center gap-2 rounded-[--radius-xl] border border-dashed border-border px-4 py-4 text-sm text-foreground-tertiary transition-all duration-200 hover:border-accent hover:text-accent hover:bg-accent-subtle"
+        className="flex w-full items-center gap-2 rounded-[--radius-xl] border border-dashed border-border px-4 py-4 text-sm font-medium text-foreground-tertiary transition-all duration-200 ease-out hover:border-accent/60 hover:bg-accent-subtle hover:text-accent"
       >
         <Plus className="h-4 w-4" />
         New project
@@ -37,14 +38,14 @@ export function ProjectForm() {
         formRef.current?.reset()
         setIsOpen(false)
       }}
-      className="rounded-[--radius-xl] border border-border-light/60 bg-surface p-5 shadow-sm space-y-4"
+      className="space-y-4 rounded-[--radius-xl] border border-border-light bg-surface p-5 shadow-md"
     >
       <input
         name="name"
-        placeholder="Project name"
+        placeholder="What are you building?"
         autoFocus
         required
-        className="w-full bg-transparent text-base font-semibold text-foreground outline-none placeholder:text-foreground-quaternary"
+        className="w-full bg-transparent text-[17px] font-semibold tracking-tight text-foreground outline-none placeholder:text-foreground-quaternary"
       />
       <input
         name="description"

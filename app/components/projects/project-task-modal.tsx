@@ -94,8 +94,14 @@ export function ProjectTaskModal({ task, projectColor, onClose }: ProjectTaskMod
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-[--radius-xl] border border-border-light/40 bg-surface/95 backdrop-blur-2xl shadow-lg">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[--radius-2xl] border border-border-light bg-glass-surface-floating shadow-xl backdrop-blur-2xl"
+      >
         {/* Color bar */}
         <div className="h-1.5" style={{ backgroundColor: projectColor }} />
 
@@ -162,41 +168,62 @@ export function ProjectTaskModal({ task, projectColor, onClose }: ProjectTaskMod
           </div>
 
           {/* Calendar assignment */}
-          {calendars.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
-                Add to Calendar
-              </label>
-              <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+              Add to Calendar
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCalendarId("")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all duration-150",
+                  !calendarId
+                    ? "border-accent bg-accent-light text-accent"
+                    : "border-border text-foreground-tertiary hover:border-accent/30"
+                )}
+              >
+                None
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalendarId("local")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all duration-150",
+                  calendarId === "local"
+                    ? "border-accent bg-accent-light text-accent"
+                    : "border-border text-foreground-tertiary hover:border-accent/30"
+                )}
+              >
+                <CalendarIcon className="h-3 w-3" />
+                Local
+              </button>
+              {calendars.map((cal) => (
                 <button
-                  onClick={() => setCalendarId("")}
+                  type="button"
+                  key={cal.id}
+                  onClick={() => setCalendarId(cal.id)}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all",
-                    !calendarId
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all duration-150",
+                    calendarId === cal.id
                       ? "border-accent bg-accent-light text-accent"
                       : "border-border text-foreground-tertiary hover:border-accent/30"
                   )}
                 >
-                  None
+                  <div
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ backgroundColor: cal.backgroundColor }}
+                  />
+                  {cal.summary}
                 </button>
-                {calendars.map((cal) => (
-                  <button
-                    key={cal.id}
-                    onClick={() => setCalendarId(cal.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all",
-                      calendarId === cal.id
-                        ? "border-accent bg-accent-light text-accent"
-                        : "border-border text-foreground-tertiary hover:border-accent/30"
-                    )}
-                  >
-                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cal.backgroundColor }} />
-                    {cal.summary}
-                  </button>
-                ))}
-              </div>
+              ))}
             </div>
-          )}
+            {!dueDate && (
+              <p className="text-[11px] text-foreground-quaternary">
+                Set a due date to create a calendar event.
+              </p>
+            )}
+          </div>
 
           {/* Description */}
           <div className="space-y-2">

@@ -41,11 +41,11 @@ export function MonthView({
   return (
     <div>
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 mb-1">
+      <div className="mb-2 grid grid-cols-7">
         {weekdays.map((day) => (
           <div
             key={day}
-            className="py-2 text-center text-xs font-medium text-foreground-quaternary"
+            className="py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary"
           >
             {day}
           </div>
@@ -53,13 +53,13 @@ export function MonthView({
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-px rounded-[--radius-lg] border border-border-light bg-border-light overflow-hidden">
+      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-[--radius-2xl] border border-border-light bg-border-light shadow-sm">
         {grid.map((date, i) => {
           if (!date) {
             return (
               <div
                 key={`empty-${i}`}
-                className="min-h-24 bg-background-secondary p-1.5"
+                className="min-h-28 bg-background-secondary/60"
               />
             )
           }
@@ -72,33 +72,42 @@ export function MonthView({
           return (
             <button
               key={dateKey}
+              type="button"
               onClick={() => onSelectDate(dateKey)}
               className={cn(
-                "min-h-24 bg-surface p-1.5 text-left transition-colors duration-150 hover:bg-surface-hover",
-                isSelected && "bg-accent-light"
+                "group relative min-h-28 p-2 text-left transition-all duration-200 ease-out",
+                isSelected
+                  ? "bg-accent-subtle"
+                  : "bg-surface hover:bg-surface-raised"
               )}
             >
+              {/* Date number */}
               <span
                 className={cn(
-                  "inline-flex h-7 w-7 items-center justify-center rounded-full text-sm",
-                  today && "bg-accent text-white font-semibold",
-                  !today && "text-foreground"
+                  "inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-medium transition-colors duration-150",
+                  today
+                    ? "bg-accent font-semibold text-white shadow-sm"
+                    : isSelected
+                      ? "text-accent"
+                      : "text-foreground"
                 )}
               >
                 {date.getDate()}
               </span>
-              <div className="mt-1 space-y-0.5">
+
+              {/* Events */}
+              <div className="mt-1.5 space-y-1">
                 {dayEvents.slice(0, 3).map((event, idx) => (
                   <div
                     key={`${event.id}-${idx}`}
-                    className="truncate rounded px-1 py-0.5 text-xs text-white"
-                    style={{ backgroundColor: event.color || "#0071e3" }}
+                    className="truncate rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                    style={{ backgroundColor: event.color || "var(--accent)" }}
                   >
                     {event.title}
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <p className="px-1 text-xs text-foreground-tertiary">
+                  <p className="px-1 text-[10px] font-medium text-foreground-tertiary">
                     +{dayEvents.length - 3} more
                   </p>
                 )}

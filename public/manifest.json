@@ -4,8 +4,8 @@
   "description": "Your personal AI-powered command center",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#7986cb",
+  "background_color": "#161214",
+  "theme_color": "#c99a5b",
   "orientation": "any",
   "icons": [
     {
@@ -14,9 +14,10 @@
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/luma-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

@@ -22,11 +22,12 @@ export function HabitForm() {
   if (!isOpen) {
     return (
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center gap-2 rounded-[--radius-xl] border border-dashed border-border px-4 py-4 text-sm text-foreground-tertiary transition-all duration-200 hover:border-accent hover:text-accent hover:bg-accent-subtle"
+        className="flex w-full items-center gap-2 rounded-[--radius-xl] border border-dashed border-border px-4 py-4 text-sm font-medium text-foreground-tertiary transition-all duration-200 ease-out hover:border-accent/60 hover:bg-accent-subtle hover:text-accent"
       >
         <Plus className="h-4 w-4" />
-        Add habit to track
+        Add a habit
       </button>
     )
   }
@@ -41,14 +42,14 @@ export function HabitForm() {
         formRef.current?.reset()
         setIsOpen(false)
       }}
-      className="rounded-[--radius-xl] border border-border-light/60 bg-surface p-5 shadow-sm space-y-4"
+      className="space-y-5 rounded-[--radius-xl] border border-border-light bg-surface p-5 shadow-md"
     >
       <input
         name="name"
-        placeholder="Habit name (e.g. Exercise, Read, Meditate)"
+        placeholder="What's the habit? (Exercise, Read, Meditate...)"
         autoFocus
         required
-        className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
+        className="w-full bg-transparent text-[15px] font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
       />
 
       {/* Icon picker */}

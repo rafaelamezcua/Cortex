@@ -71,20 +71,27 @@ export function CalendarSidebar({
     <div className="space-y-6">
       {/* Mini month navigator */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center justify-between">
+          <span
+            className="text-[15px] font-medium tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
             {getMonthName(miniMonth)} {miniYear}
           </span>
           <div className="flex gap-0.5">
             <button
+              type="button"
               onClick={prevMiniMonth}
-              className="flex h-6 w-6 items-center justify-center rounded text-foreground-tertiary hover:bg-surface-hover"
+              aria-label="Previous month"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
             <button
+              type="button"
               onClick={nextMiniMonth}
-              className="flex h-6 w-6 items-center justify-center rounded text-foreground-tertiary hover:bg-surface-hover"
+              aria-label="Next month"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -92,11 +99,11 @@ export function CalendarSidebar({
         </div>
 
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 mb-0.5">
+        <div className="mb-1 grid grid-cols-7">
           {weekdays.map((day, i) => (
             <div
               key={i}
-              className="text-center text-[10px] font-medium text-foreground-quaternary py-1"
+              className="py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-foreground-quaternary"
             >
               {day}
             </div>
@@ -104,7 +111,7 @@ export function CalendarSidebar({
         </div>
 
         {/* Mini grid */}
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7 gap-0.5">
           {grid.map((date, i) => {
             if (!date) {
               return <div key={`empty-${i}`} className="h-7" />
@@ -116,11 +123,12 @@ export function CalendarSidebar({
             return (
               <button
                 key={dateKey}
+                type="button"
                 onClick={() => handleSelectDate(dateKey)}
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-xs transition-all duration-150 mx-auto",
-                  today && !isSelected && "bg-accent text-white font-semibold",
-                  isSelected && "bg-accent text-white font-semibold ring-2 ring-accent/30",
+                  "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs transition-all duration-150",
+                  today && !isSelected && "bg-accent font-semibold text-white shadow-sm",
+                  isSelected && "bg-accent font-semibold text-white shadow-sm ring-2 ring-accent/30 ring-offset-2 ring-offset-background",
                   !today && !isSelected && "text-foreground hover:bg-surface-hover"
                 )}
               >
@@ -133,14 +141,15 @@ export function CalendarSidebar({
 
       {/* Calendar list */}
       <div>
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary mb-3">
-          My Calendars
+        <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+          My calendars
         </h3>
         <div className="space-y-1">
           {/* Local calendar */}
           <button
+            type="button"
             onClick={() => onToggleCalendar("local")}
-            className="flex w-full items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm transition-colors hover:bg-surface-hover"
+            className="flex w-full items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm transition-colors duration-150 hover:bg-surface-hover"
           >
             <div
               className={cn(
@@ -165,8 +174,9 @@ export function CalendarSidebar({
             return (
               <div key={cal.id} className="group flex items-center">
                 <button
+                  type="button"
                   onClick={() => onToggleCalendar(cal.id)}
-                  className="flex flex-1 items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm transition-colors hover:bg-surface-hover"
+                  className="flex flex-1 items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm transition-colors duration-150 hover:bg-surface-hover"
                 >
                   <div
                     className="flex h-4 w-4 items-center justify-center rounded border-2 transition-colors"
@@ -249,8 +259,9 @@ function CreateCalendarButton({ onCreated }: { onCreated: (id: string) => void }
   if (!isOpen) {
     return (
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center gap-2 rounded-[--radius-md] px-2 py-2 text-xs text-foreground-tertiary transition-colors hover:bg-surface-hover hover:text-accent"
+        className="flex w-full items-center gap-2 rounded-[--radius-md] px-2 py-2 text-xs font-medium text-foreground-tertiary transition-colors duration-150 hover:bg-accent-subtle hover:text-accent"
       >
         <Plus className="h-3.5 w-3.5" />
         New calendar
@@ -259,13 +270,13 @@ function CreateCalendarButton({ onCreated }: { onCreated: (id: string) => void }
   }
 
   return (
-    <div className="rounded-[--radius-md] border border-border-light bg-background p-2.5 space-y-2">
+    <div className="space-y-2 rounded-[--radius-lg] border border-border-light bg-surface p-3">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Calendar name"
         autoFocus
-        className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-foreground-quaternary"
+        className="w-full bg-transparent text-xs font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
       />
       <div className="flex gap-1.5">
         {calColors.map((c) => (

@@ -35,24 +35,32 @@ export default async function ProjectPage({
 
       <div className="flex items-center gap-4">
         <div
-          className="flex h-12 w-12 items-center justify-center rounded-[--radius-lg] text-white text-lg font-bold"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[--radius-lg] text-lg font-bold text-white shadow-sm"
           style={{ backgroundColor: project.color }}
         >
           {project.name.charAt(0)}
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
+        <div className="min-w-0 flex-1">
+          <h1
+            className="truncate text-3xl font-medium tracking-tight"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
             {project.name}
           </h1>
           {project.description && (
-            <p className="text-sm text-foreground-secondary">
+            <p className="mt-1 text-sm text-foreground-secondary">
               {project.description}
             </p>
           )}
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold tracking-tight">{progress}%</p>
-          <p className="text-xs text-foreground-tertiary">
+          <p
+            className="text-3xl font-medium tracking-tight tabular-nums"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            {progress}%
+          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
             {completed}/{tasks.length} tasks
           </p>
         </div>

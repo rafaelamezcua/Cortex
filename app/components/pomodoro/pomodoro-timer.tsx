@@ -31,14 +31,11 @@ export function PomodoroTimer() {
   const minutes = Math.floor(secondsLeft / 60)
   const seconds = secondsLeft % 60
 
-  const switchMode = useCallback(
-    (newMode: Mode) => {
-      setMode(newMode)
-      setSecondsLeft(DURATIONS[newMode])
-      setIsRunning(false)
-    },
-    []
-  )
+  const switchMode = useCallback((newMode: Mode) => {
+    setMode(newMode)
+    setSecondsLeft(DURATIONS[newMode])
+    setIsRunning(false)
+  }, [])
 
   useEffect(() => {
     if (!isRunning) {
@@ -51,7 +48,6 @@ export function PomodoroTimer() {
         if (prev <= 1) {
           setIsRunning(false)
 
-          // Play notification sound
           if (typeof window !== "undefined" && "Notification" in window) {
             new Notification(
               mode === "focus" ? "Focus session complete!" : "Break over!"
@@ -61,7 +57,6 @@ export function PomodoroTimer() {
           if (mode === "focus") {
             const newSessions = sessions + 1
             setSessions(newSessions)
-            // Every 4 sessions, long break
             switchMode(newSessions % 4 === 0 ? "longBreak" : "break")
           } else {
             switchMode("focus")
@@ -78,34 +73,37 @@ export function PomodoroTimer() {
     }
   }, [isRunning, mode, sessions, switchMode])
 
-  // Request notification permission
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       Notification.requestPermission()
     }
   }, [])
 
-  const circumference = 2 * Math.PI * 90
+  const ringSize = 260
+  const ringRadius = 108
+  const ringStroke = 8
+  const circumference = 2 * Math.PI * ringRadius
 
   return (
-    <div className="flex flex-col items-center gap-8">
+    <div className="flex flex-col items-center gap-10">
       {/* Mode selector */}
-      <div className="flex rounded-[--radius-md] border border-border-light bg-background-secondary p-0.5">
+      <div className="flex rounded-full border border-border-light bg-surface p-1 shadow-sm">
         {(["focus", "break", "longBreak"] as Mode[]).map((m) => (
           <button
             key={m}
+            type="button"
             onClick={() => switchMode(m)}
             className={cn(
-              "rounded-[--radius-sm] px-4 py-2 text-xs font-medium transition-all",
+              "rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 ease-out",
               mode === m
-                ? "bg-surface text-foreground shadow-sm"
+                ? "bg-accent text-white shadow-sm"
                 : "text-foreground-tertiary hover:text-foreground"
             )}
           >
             {m === "longBreak" ? (
               <span className="flex items-center gap-1.5">
                 <Coffee className="h-3 w-3" />
-                Long Break
+                Long break
               </span>
             ) : (
               MODE_LABELS[m]
@@ -114,85 +112,88 @@ export function PomodoroTimer() {
         ))}
       </div>
 
-      {/* Timer circle */}
+      {/* Timer ring */}
       <div className="relative flex items-center justify-center">
-        <svg width="220" height="220" className="-rotate-90">
-          {/* Background circle */}
+        <svg width={ringSize} height={ringSize} className="-rotate-90">
           <circle
-            cx="110"
-            cy="110"
-            r="90"
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={ringRadius}
             fill="none"
             stroke="var(--background-tertiary)"
-            strokeWidth="6"
+            strokeWidth={ringStroke}
           />
-          {/* Progress circle */}
           <circle
-            cx="110"
-            cy="110"
-            r="90"
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={ringRadius}
             fill="none"
             stroke={mode === "focus" ? "var(--accent)" : "var(--success)"}
-            strokeWidth="6"
+            strokeWidth={ringStroke}
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference - (progress / 100) * circumference}
-            className="transition-all duration-1000"
+            className="transition-all duration-1000 ease-out"
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className="text-5xl font-bold tracking-tight tabular-nums">
+          <span
+            className="text-[68px] font-normal leading-none tabular-nums tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
             {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
           </span>
-          <span className="text-sm text-foreground-tertiary mt-1">
+          <span className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-foreground-tertiary">
             {MODE_LABELS[mode]}
           </span>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         <button
+          type="button"
           onClick={() => switchMode(mode)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground-tertiary transition-colors hover:bg-surface-hover hover:text-foreground"
-          title="Reset"
+          aria-label="Reset timer"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-foreground-tertiary transition-all duration-150 ease-out hover:bg-surface-hover hover:text-foreground"
         >
           <RotateCcw className="h-4 w-4" />
         </button>
 
         <button
+          type="button"
           onClick={() => setIsRunning(!isRunning)}
+          aria-label={isRunning ? "Pause timer" : "Start timer"}
           className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-full text-white transition-all duration-200 shadow-md hover:shadow-lg active:scale-95",
-            mode === "focus" ? "bg-accent" : "bg-success"
+            "flex h-16 w-16 items-center justify-center rounded-full text-white shadow-md",
+            "transition-all duration-200 ease-out hover:shadow-lg active:scale-95",
+            mode === "focus" ? "bg-accent hover:bg-accent-hover" : "bg-success"
           )}
         >
           {isRunning ? (
             <Pause className="h-6 w-6" />
           ) : (
-            <Play className="h-6 w-6 ml-0.5" />
+            <Play className="ml-0.5 h-6 w-6" fill="currentColor" />
           )}
         </button>
 
-        <div className="flex h-10 w-10 items-center justify-center">
-          <span className="text-xs font-medium text-foreground-quaternary">
+        <div className="flex h-11 w-11 items-center justify-center">
+          <span className="text-xs font-medium tabular-nums text-foreground-quaternary">
             #{sessions + 1}
           </span>
         </div>
       </div>
 
-      {/* Session count */}
-      <div className="flex gap-1.5">
+      {/* Session progress — 4 dots toward long break */}
+      <div className="flex items-center gap-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
             className={cn(
-              "h-2 w-2 rounded-full transition-colors",
+              "h-1.5 rounded-full transition-all duration-300 ease-out",
               i < sessions % 4
-                ? mode === "focus"
-                  ? "bg-accent"
-                  : "bg-success"
-                : "bg-background-tertiary"
+                ? "w-8 bg-accent"
+                : "w-1.5 bg-background-tertiary"
             )}
           />
         ))}

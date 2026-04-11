@@ -104,15 +104,26 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-[--radius-xl] border border-border-light/40 bg-surface/95 backdrop-blur-2xl p-6 shadow-lg">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {isEditing ? "Edit Event" : "New Event"}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-[--radius-2xl] border border-border-light bg-glass-surface-floating p-7 shadow-xl backdrop-blur-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-6 flex items-center justify-between">
+          <h2
+            className="text-[22px] font-medium tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            {isEditing ? "Edit event" : "New event"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-[--radius-sm] p-1.5 text-foreground-tertiary hover:bg-surface-hover hover:text-foreground transition-colors"
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -138,12 +149,12 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
           {/* Title */}
           <input
             name="title"
-            placeholder="Event title"
+            placeholder="What's happening?"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
             autoFocus
-            className="w-full bg-transparent text-base font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
+            className="w-full bg-transparent text-[17px] font-semibold tracking-tight text-foreground outline-none placeholder:text-foreground-quaternary"
           />
 
           {/* Description */}
@@ -208,7 +219,7 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
                 type="datetime-local"
                 defaultValue={defaultStart}
                 required
-                className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent"
+                className="h-11 w-full rounded-[--radius-lg] border border-border-light bg-surface px-3.5 text-sm text-foreground outline-none transition-colors duration-150 focus:border-accent/60"
               />
             </div>
             <div className="space-y-1.5">
@@ -219,7 +230,7 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
                 name="endTime"
                 type="datetime-local"
                 defaultValue={defaultEnd}
-                className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent"
+                className="h-11 w-full rounded-[--radius-lg] border border-border-light bg-surface px-3.5 text-sm text-foreground outline-none transition-colors duration-150 focus:border-accent/60"
               />
             </div>
           </div>
@@ -242,7 +253,7 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
             <select
               name="recurrence"
               defaultValue={event?.recurrence || "none"}
-              className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent"
+              className="h-11 w-full rounded-[--radius-lg] border border-border-light bg-surface px-3.5 text-sm text-foreground outline-none transition-colors duration-150 focus:border-accent/60"
             >
               <option value="none">Does not repeat</option>
               <option value="daily">Every day</option>
@@ -305,7 +316,7 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
               }}
               placeholder="Add notes for this event..."
               rows={4}
-              className="w-full resize-none rounded-[--radius-md] border border-border-light bg-background p-3 text-sm text-foreground outline-none placeholder:text-foreground-quaternary focus:border-accent"
+              className="w-full resize-none rounded-[--radius-lg] border border-border-light bg-surface p-3.5 text-sm leading-relaxed text-foreground outline-none transition-colors duration-150 placeholder:text-foreground-quaternary focus:border-accent/60"
             />
           </div>
 

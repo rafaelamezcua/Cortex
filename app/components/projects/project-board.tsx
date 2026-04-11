@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { addProjectTask, updateProjectTask, deleteProjectTask } from "@/lib/actions/projects"
-import { Check, Trash2, Plus, GripVertical, Clock } from "lucide-react"
+import { Check, Trash2, Plus, GripVertical, Clock, Calendar as CalendarIcon } from "lucide-react"
 import { useState, useTransition } from "react"
 import { ProjectTaskModal } from "./project-task-modal"
 import {
@@ -122,6 +122,95 @@ function DraggableTaskCard({ task, onClick }: { task: ProjectTask; onClick: () =
   )
 }
 
+function NewTaskForm({
+  projectId,
+  onDone,
+}: {
+  projectId: string
+  onDone: () => void
+}) {
+  const [title, setTitle] = useState("")
+  const [dueDate, setDueDate] = useState("")
+  const [addToCal, setAddToCal] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  function submit() {
+    if (!title.trim()) {
+      onDone()
+      return
+    }
+    startTransition(async () => {
+      await addProjectTask(projectId, title, {
+        dueDate: dueDate || undefined,
+        calendarId: addToCal && dueDate ? "local" : undefined,
+      })
+      onDone()
+    })
+  }
+
+  return (
+    <div className="space-y-2 rounded-[--radius-lg] border border-accent/30 bg-surface p-3 shadow-sm">
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Task name..."
+        autoFocus
+        disabled={isPending}
+        className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-foreground-quaternary"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault()
+            submit()
+          }
+          if (e.key === "Escape") onDone()
+        }}
+      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          disabled={isPending}
+          className="h-7 rounded-[--radius-md] border border-border bg-surface px-2 text-[11px] text-foreground-secondary outline-none focus:border-accent/60"
+        />
+        <button
+          type="button"
+          onClick={() => setAddToCal(!addToCal)}
+          disabled={!dueDate || isPending}
+          className={cn(
+            "flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-all duration-150",
+            addToCal && dueDate
+              ? "border-accent bg-accent-light text-accent"
+              : "border-border text-foreground-tertiary hover:border-accent/30",
+            !dueDate && "opacity-40"
+          )}
+        >
+          <CalendarIcon className="h-2.5 w-2.5" />
+          Add to calendar
+        </button>
+      </div>
+      <div className="flex justify-end gap-1">
+        <button
+          type="button"
+          onClick={onDone}
+          disabled={isPending}
+          className="rounded-[--radius-sm] px-2 py-1 text-[11px] text-foreground-tertiary hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!title.trim() || isPending}
+          className="rounded-[--radius-sm] bg-accent px-2 py-1 text-[11px] font-medium text-white disabled:opacity-40"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function ProjectBoard({ projectId, projectColor, tasks }: ProjectBoardProps) {
   const [isPending, startTransition] = useTransition()
   const [newTaskCol, setNewTaskCol] = useState<string | null>(null)
@@ -198,26 +287,10 @@ export function ProjectBoard({ projectId, projectColor, tasks }: ProjectBoardPro
                 )}
 
                 {newTaskCol === col.key && (
-                  <form
-                    action={(formData) => {
-                      const title = formData.get("title") as string
-                      if (title?.trim()) {
-                        startTransition(() => addProjectTask(projectId, title))
-                      }
-                      setNewTaskCol(null)
-                    }}
-                    className="rounded-[--radius-lg] border border-accent/30 bg-surface p-3"
-                  >
-                    <input
-                      name="title"
-                      placeholder="Task name..."
-                      autoFocus
-                      className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-quaternary"
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") setNewTaskCol(null)
-                      }}
-                    />
-                  </form>
+                  <NewTaskForm
+                    projectId={projectId}
+                    onDone={() => setNewTaskCol(null)}
+                  />
                 )}
               </DroppableColumn>
             </div>

@@ -1,6 +1,7 @@
 import { getNote } from "@/lib/actions/notes"
 import { NoteEditor } from "@/app/components/notes/note-editor"
 import { deleteNote } from "@/lib/actions/notes"
+import { NoteVaultButton } from "@/app/components/notes/note-vault-button"
 import { Button } from "@/app/components/ui/button"
 import { ArrowLeft, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -27,14 +28,19 @@ export default async function NotePage({
           <ArrowLeft className="h-4 w-4" />
           Notes
         </Link>
-        <form action={async () => {
-          "use server"
-          await deleteNote(id)
-        }}>
-          <Button variant="ghost" size="sm" type="submit">
-            <Trash2 className="h-3.5 w-3.5 text-danger" />
-          </Button>
-        </form>
+        <div className="flex items-center gap-2">
+          <NoteVaultButton noteId={id} />
+          <form
+            action={async () => {
+              "use server"
+              await deleteNote(id)
+            }}
+          >
+            <Button variant="ghost" size="sm" type="submit">
+              <Trash2 className="h-3.5 w-3.5 text-danger" />
+            </Button>
+          </form>
+        </div>
       </div>
 
       <NoteEditor note={note} />

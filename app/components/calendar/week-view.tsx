@@ -86,10 +86,10 @@ export function WeekView({
   )
 
   return (
-    <div className="rounded-[--radius-xl] border border-border-light/60 bg-surface overflow-hidden shadow-sm">
+    <div className="overflow-hidden rounded-[--radius-2xl] border border-border-light bg-surface shadow-md">
       {/* Header — day names + dates */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-light/60">
-        <div className="border-r border-border-light/40" />
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-light">
+        <div className="border-r border-border-light/50" />
         {days.map((day) => {
           const today = isToday(day)
           const dayName = day.toLocaleDateString("en-US", { weekday: "short" })
@@ -99,22 +99,22 @@ export function WeekView({
             <div
               key={formatDateKey(day)}
               className={cn(
-                "flex flex-col items-center py-3 border-r border-border-light/40 last:border-r-0",
+                "flex flex-col items-center border-r border-border-light/50 py-3 last:border-r-0",
                 today && "bg-accent-subtle"
               )}
             >
               <span
                 className={cn(
-                  "text-[11px] font-medium uppercase tracking-wider",
-                  today ? "text-accent" : "text-foreground-tertiary"
+                  "text-[11px] font-semibold uppercase tracking-wider",
+                  today ? "text-accent" : "text-foreground-quaternary"
                 )}
               >
                 {dayName}
               </span>
               <span
                 className={cn(
-                  "mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold",
-                  today ? "bg-accent text-white" : "text-foreground"
+                  "mt-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                  today ? "bg-accent text-white shadow-sm" : "text-foreground"
                 )}
               >
                 {dayNum}
@@ -126,9 +126,11 @@ export function WeekView({
 
       {/* All-day events row */}
       {hasAllDay && (
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-light/60">
-          <div className="flex items-center justify-center border-r border-border-light/40">
-            <span className="text-[10px] text-foreground-quaternary">ALL DAY</span>
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-light">
+          <div className="flex items-center justify-center border-r border-border-light/50">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+              All day
+            </span>
           </div>
           {days.map((day) => {
             const dateKey = formatDateKey(day)
@@ -136,13 +138,14 @@ export function WeekView({
             return (
               <div
                 key={dateKey}
-                className="min-h-[32px] border-r border-border-light/40 last:border-r-0 p-0.5"
+                className="min-h-[32px] border-r border-border-light/50 p-1 last:border-r-0"
               >
                 {dayAllDay.map((event) => (
                   <button
                     key={event.id}
+                    type="button"
                     onClick={() => onSelectEvent(event)}
-                    className="w-full truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white mb-0.5"
+                    className="mb-0.5 w-full truncate rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm transition-opacity hover:opacity-90"
                     style={{ backgroundColor: event.color || "var(--accent)" }}
                   >
                     {event.title}
@@ -165,10 +168,10 @@ export function WeekView({
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="flex items-start justify-end pr-2 border-r border-border-light/40"
+                className="flex items-start justify-end border-r border-border-light/50 pr-2"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <span className="relative -top-2 text-[10px] text-foreground-quaternary">
+                <span className="relative -top-2 text-[10px] font-medium text-foreground-quaternary">
                   {hour > 0 ? formatHour(hour) : ""}
                 </span>
               </div>
@@ -185,15 +188,15 @@ export function WeekView({
               <div
                 key={dateKey}
                 className={cn(
-                  "relative border-r border-border-light/40 last:border-r-0",
-                  today && "bg-accent-subtle/30"
+                  "relative border-r border-border-light/50 last:border-r-0",
+                  today && "bg-accent-subtle/40"
                 )}
               >
                 {/* Hour grid lines */}
                 {HOURS.map((hour) => (
                   <div
                     key={hour}
-                    className="border-b border-border-light/30 cursor-pointer hover:bg-surface-hover/50 transition-colors"
+                    className="cursor-pointer border-b border-border-light/40 transition-colors duration-150 hover:bg-accent-subtle/50"
                     style={{ height: HOUR_HEIGHT }}
                     onClick={() => onCreateEvent(dateKey, hour)}
                   />
@@ -205,26 +208,30 @@ export function WeekView({
                   return (
                     <button
                       key={event.id}
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         onSelectEvent(event)
                       }}
-                      className="absolute left-0.5 right-1 rounded-[6px] px-2 py-1 text-left transition-opacity hover:opacity-90 overflow-hidden"
+                      className="absolute left-1 right-1 overflow-hidden rounded-[8px] px-2 py-1 text-left shadow-sm transition-all duration-150 hover:opacity-90 hover:shadow-md"
                       style={{
                         top: pos.top,
-                        height: Math.max(pos.height - 2, 20),
+                        height: Math.max(pos.height - 2, 22),
                         backgroundColor: event.color || "var(--accent)",
                       }}
                     >
-                      <p className="text-[11px] font-semibold text-white truncate leading-tight">
+                      <p className="truncate text-[11px] font-semibold leading-tight text-white">
                         {event.title}
                       </p>
                       {pos.height > 40 && (
-                        <p className="text-[10px] text-white/80 truncate">
-                          {new Date(event.startTime).toLocaleTimeString("en-US", {
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
+                        <p className="truncate text-[10px] text-white/80">
+                          {new Date(event.startTime).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            }
+                          )}
                         </p>
                       )}
                     </button>

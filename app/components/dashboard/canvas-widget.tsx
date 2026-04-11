@@ -1,6 +1,7 @@
 "use client"
 
 import { Card } from "@/app/components/ui/card"
+import { WidgetHeader } from "@/app/components/ui/widget-header"
 import { Skeleton } from "@/app/components/ui/skeleton"
 import { GraduationCap, Clock, AlertTriangle, ExternalLink } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -34,14 +35,7 @@ export function CanvasWidget({ isConnected }: { isConnected: boolean }) {
   if (!isConnected) {
     return (
       <Card className="col-span-1">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
-            <GraduationCap className="h-5 w-5 text-accent" />
-          </div>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
-            Canvas
-          </h2>
-        </div>
+        <WidgetHeader icon={GraduationCap} label="Canvas" />
         <p className="text-sm text-foreground-tertiary">
           Add CANVAS_API_URL and CANVAS_API_TOKEN to connect
         </p>
@@ -52,14 +46,7 @@ export function CanvasWidget({ isConnected }: { isConnected: boolean }) {
   if (error) {
     return (
       <Card className="col-span-1">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
-            <GraduationCap className="h-5 w-5 text-accent" />
-          </div>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
-            Canvas
-          </h2>
-        </div>
+        <WidgetHeader icon={GraduationCap} label="Canvas" />
         <p className="text-xs text-foreground-tertiary">Unable to fetch assignments</p>
       </Card>
     )
@@ -86,23 +73,11 @@ export function CanvasWidget({ isConnected }: { isConnected: boolean }) {
 
   return (
     <Card className="col-span-1">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-accent-light">
-            <GraduationCap className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-[13px] font-semibold uppercase tracking-wider text-foreground-tertiary">
-              Canvas
-            </h2>
-            {assignments.length > 0 && (
-              <p className="text-xs text-foreground-quaternary">
-                {assignments.length} upcoming
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      <WidgetHeader
+        icon={GraduationCap}
+        label="Canvas"
+        subtitle={assignments.length > 0 ? `${assignments.length} upcoming` : undefined}
+      />
 
       {assignments.length === 0 ? (
         <p className="text-sm text-foreground-tertiary">No upcoming assignments</p>

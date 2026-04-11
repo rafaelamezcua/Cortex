@@ -2,13 +2,19 @@ import { PomodoroTimer } from "@/app/components/pomodoro/pomodoro-timer"
 
 export default function FocusPage() {
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Focus</h1>
-        <p className="mt-1 text-sm text-foreground-secondary">
-          Stay in the zone with the Pomodoro technique.
+    <div className="mx-auto max-w-md space-y-10">
+      <section className="text-center">
+        <h1
+          className="text-3xl font-medium tracking-tight"
+          style={{ fontFamily: "var(--font-fraunces)" }}
+        >
+          Focus
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-foreground-secondary">
+          Pick a mode and start the clock. The next 25 minutes can belong to
+          one thing.
         </p>
-      </div>
+      </section>
 
       <PomodoroTimer />
     </div>

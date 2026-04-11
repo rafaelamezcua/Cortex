@@ -4,7 +4,9 @@ import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { MessageBubble } from "./message-bubble"
 import { ChatInput } from "./chat-input"
-import Image from "next/image"
+import { LumaLogo } from "@/app/components/ui/luma-logo"
+import { VaultAttachButton } from "@/app/components/ui/vault-attach-button"
+import { attachChatToVault } from "@/lib/actions/vault"
 import { useEffect, useRef, useState, useMemo, type FormEvent } from "react"
 import type { UIMessage } from "ai"
 
@@ -111,32 +113,56 @@ export function ChatContainer({
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col">
+    <div className="flex h-full flex-col">
+      {/* Chat header — save action, only shown when there are messages */}
+      {messages.length > 0 && (
+        <div className="mb-2 flex items-center justify-end">
+          <VaultAttachButton
+            onAttach={() => attachChatToVault(conversationId)}
+            label="Save to Obsidian"
+          />
+        </div>
+      )}
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 py-4">
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-light">
-              <Image src="/luma-logo.svg" alt="Luma" width={36} height={36} />
+          <div className="flex h-full flex-col items-center justify-center gap-8 pb-12">
+            {/* Luma avatar with aura */}
+            <div className="relative flex items-center justify-center">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -inset-6 animate-luma-breathe"
+                style={{ backgroundImage: "var(--luma-aura)" }}
+              />
+              <LumaLogo
+                size={88}
+                className="relative text-foreground drop-shadow-sm"
+                aria-label="Luma"
+              />
             </div>
+
             <div className="text-center">
-              <h2 className="text-lg font-semibold tracking-tight">
-                Chat with Luma
+              <h2
+                className="text-3xl font-normal leading-tight tracking-tight text-foreground"
+                style={{ fontFamily: "var(--font-fraunces)" }}
+              >
+                What&apos;s on your mind?
               </h2>
-              <p className="mt-1 text-sm text-foreground-secondary">
-                Ask me anything, manage tasks, or send me images and PDFs.
+              <p className="mt-2 text-sm text-foreground-secondary">
+                Ask me anything. I can read images and PDFs too.
               </p>
             </div>
-            <div className="flex flex-wrap justify-center gap-2 mt-2">
+
+            <div className="flex flex-wrap justify-center gap-2">
               {[
-                "What are my tasks?",
-                "Help me plan my day",
-                "What assignments do I have?",
+                "What's on my plate today?",
+                "Help me plan my morning",
+                "Summarize my open tasks",
               ].map((suggestion) => (
                 <button
                   key={suggestion}
                   onClick={() => setInput(suggestion)}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground-secondary transition-colors duration-150 hover:border-accent hover:text-accent"
+                  className="rounded-full border border-border bg-surface px-4 py-2 text-xs font-medium text-foreground-secondary shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-accent/40 hover:text-accent hover:shadow-md"
                 >
                   {suggestion}
                 </button>
@@ -144,7 +170,7 @@ export function ChatContainer({
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {messages
               .filter((m) => m.role !== "system")
               .map((message) => {
@@ -156,17 +182,21 @@ export function ChatContainer({
                   <div key={message.id}>
                     {/* Show attached files above message */}
                     {msgFiles.length > 0 && message.role === "user" && (
-                      <div className="flex justify-end mb-1">
+                      <div className="mb-1 flex justify-end">
                         <div className="flex gap-1.5">
                           {msgFiles.map((f, i) => (
                             <div
                               key={i}
-                              className="h-16 w-16 rounded-[--radius-md] border border-border-light overflow-hidden bg-background-secondary flex items-center justify-center"
+                              className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[--radius-md] border border-border-light bg-background-secondary"
                             >
                               {f.mediaType?.startsWith("image/") ? (
-                                <span className="text-xs text-foreground-tertiary">📷</span>
+                                <span className="text-xs text-foreground-tertiary">
+                                  IMG
+                                </span>
                               ) : (
-                                <span className="text-xs text-foreground-tertiary">📄</span>
+                                <span className="text-xs text-foreground-tertiary">
+                                  PDF
+                                </span>
                               )}
                             </div>
                           ))}
@@ -184,23 +214,17 @@ export function ChatContainer({
               })}
             {isLoading &&
               messages[messages.length - 1]?.role !== "assistant" && (
-                <div className="flex gap-3 items-end">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-light">
-                    <Image
-                      src="/luma-logo.svg"
-                      alt="Luma thinking"
-                      width={20}
-                      height={20}
-                      className="animate-luma-dance"
+                <div className="flex items-center gap-3 pl-0.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+                    <LumaLogo
+                      size={40}
+                      className="animate-luma-dance text-foreground"
+                      aria-label="Luma thinking"
                     />
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-[--radius-xl] border border-border-light/60 bg-surface px-4 py-3 shadow-sm">
-                    <span className="flex gap-1">
-                      <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:0ms]" />
-                      <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:150ms]" />
-                      <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:300ms]" />
-                    </span>
-                  </div>
+                  <span className="text-sm italic text-foreground-tertiary">
+                    thinking
+                  </span>
                 </div>
               )}
           </div>
@@ -208,7 +232,7 @@ export function ChatContainer({
       </div>
 
       {/* Input area */}
-      <div className="border-t border-border-light pt-4">
+      <div className="pt-4">
         <ChatInput
           input={input}
           isLoading={isLoading}
@@ -217,9 +241,6 @@ export function ChatContainer({
           files={files}
           onFilesChange={setFiles}
         />
-        <p className="mt-2 text-center text-xs text-foreground-quaternary">
-          Luma can read images and PDFs. Paste or attach files.
-        </p>
       </div>
     </div>
   )
