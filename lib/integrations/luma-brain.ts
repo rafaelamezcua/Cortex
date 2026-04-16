@@ -1,4 +1,5 @@
 import fs from "fs/promises"
+import { existsSync } from "fs"
 import path from "path"
 
 const VAULT_PATH = process.env.LUMA_BRAIN_PATH || "C:\\Users\\ramez\\luma-brain"
@@ -117,8 +118,9 @@ export async function isVaultAvailable(): Promise<boolean> {
 }
 
 export function isVaultConfigured(): boolean {
-  const raw = process.env.LUMA_BRAIN_PATH
-  return typeof raw === "string" && raw.trim().length > 0
+  // Trust either an explicit env var OR an accessible fallback path on disk —
+  // a personal-app shouldn't require .env setup on every clone.
+  return existsSync(VAULT_PATH)
 }
 
 // ============================================================

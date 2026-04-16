@@ -148,7 +148,7 @@ export function JournalEditor({
             onAttach={() => attachJournalToVault(date)}
             label="Save to Obsidian"
             disabled={!vaultConfigured}
-            disabledReason="Set LUMA_BRAIN_PATH in .env to enable vault sync."
+            disabledReason="Vault folder not found. Set LUMA_BRAIN_PATH or create the default vault folder."
           />
           <span
             className={cn(
