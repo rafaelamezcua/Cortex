@@ -11,15 +11,18 @@ export async function POST(request: Request) {
     conversationId?: string
   }
 
-  const systemPrompt = await getSystemPrompt()
-
-  // Save user message
+  // Pull last user text first — drives memory relevance filtering and gets saved
   const lastMessage = messages[messages.length - 1]
-  if (lastMessage?.role === "user" && conversationId) {
+  let lastUserText: string | undefined
+  if (lastMessage?.role === "user") {
     const textPart = lastMessage.parts.find((p) => p.type === "text")
-    if (textPart && textPart.type === "text") {
-      await saveMessage(conversationId, "user", textPart.text)
-    }
+    if (textPart && textPart.type === "text") lastUserText = textPart.text
+  }
+
+  const systemPrompt = await getSystemPrompt(lastUserText)
+
+  if (lastUserText && conversationId) {
+    await saveMessage(conversationId, "user", lastUserText)
   }
 
   const modelMessages = await convertToModelMessages(messages)

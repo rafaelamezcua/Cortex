@@ -4,8 +4,17 @@ import { ne, and, gte, lte } from "drizzle-orm"
 import { getGoogleCalendarEvents } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
 import { getUpcomingAssignments, isCanvasConnected } from "@/lib/integrations/canvas"
+import { hasSemanticProvider, searchSemantic } from "@/lib/semantic"
 
-export async function getSystemPrompt(): Promise<string> {
+// Memory categories: directive ones (preference/style/feedback) always apply
+// to behavior; contextual ones (fact/context) only matter when relevant to the
+// current query. Filtering keeps the prompt from ballooning as memory grows.
+const DIRECTIVE_CATEGORIES = new Set(["preference", "style", "feedback"])
+const MAX_CONTEXTUAL_MEMORIES = 6
+const MAX_CONTEXTUAL_FALLBACK = 8
+const MAX_DIRECTIVE_MEMORIES = 40
+
+export async function getSystemPrompt(userQuery?: string): Promise<string> {
   const activeTasks = await db
     .select()
     .from(tasks)
@@ -14,6 +23,36 @@ export async function getSystemPrompt(): Promise<string> {
 
   const recentNotes = await db.select().from(notes).all()
   const allMemories = await db.select().from(memories).all()
+
+  // Split memories: directives ride along always, contextual get filtered
+  const directive: typeof allMemories = []
+  const contextual: typeof allMemories = []
+  for (const m of allMemories) {
+    if (DIRECTIVE_CATEGORIES.has(m.category)) directive.push(m)
+    else contextual.push(m)
+  }
+
+  let selectedContextual = contextual.slice(0, MAX_CONTEXTUAL_FALLBACK)
+  const trimmedQuery = userQuery?.trim()
+  if (trimmedQuery && hasSemanticProvider() && contextual.length > 0) {
+    const hits = await searchSemantic(trimmedQuery, {
+      kinds: ["memory"],
+      limit: 30,
+    })
+    const scoreById = new Map(hits.map((h) => [h.refId, h.score]))
+    const ranked = contextual
+      .filter((m) => scoreById.has(m.id))
+      .sort(
+        (a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0)
+      )
+      .slice(0, MAX_CONTEXTUAL_MEMORIES)
+    if (ranked.length > 0) selectedContextual = ranked
+  }
+
+  const selectedMemories = [
+    ...directive.slice(0, MAX_DIRECTIVE_MEMORIES),
+    ...selectedContextual,
+  ]
 
   const today = new Date()
   const dateStr = today.toLocaleDateString("en-US", {
@@ -71,12 +110,12 @@ export async function getSystemPrompt(): Promise<string> {
 
   // Format memories by category
   const memoryByCategory = new Map<string, string[]>()
-  for (const m of allMemories) {
+  for (const m of selectedMemories) {
     if (!memoryByCategory.has(m.category)) memoryByCategory.set(m.category, [])
     memoryByCategory.get(m.category)!.push(m.content)
   }
 
-  const memorySection = allMemories.length > 0
+  const memorySection = selectedMemories.length > 0
     ? `YOUR MEMORIES ABOUT RAMEZ:
 ${Array.from(memoryByCategory.entries())
   .map(
