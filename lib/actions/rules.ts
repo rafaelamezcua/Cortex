@@ -155,7 +155,7 @@ async function passesMemoryContains(
   const cond = (triggerConfig as { memoryContains?: MemoryContainsCondition })
     .memoryContains
   const text = cond?.text?.trim().toLowerCase()
-  if (!text) return true
+  if (!cond || !text) return true
 
   const rows = cond.category
     ? await db
