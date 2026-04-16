@@ -14,6 +14,7 @@ import {
 } from "./rule-meta"
 import type { TriggerType, ActionType, RuleInput } from "@/lib/actions/rules"
 import { createRule, updateRule } from "@/lib/actions/rules"
+import { MEMORY_CATEGORIES, type MemoryCategory } from "@/lib/memories-types"
 
 interface RuleFormProps {
   initial?: {
@@ -140,6 +141,11 @@ export function RuleForm({ initial, onClose }: RuleFormProps) {
 
           <TriggerFields
             type={triggerType}
+            config={triggerConfig}
+            onChange={setTriggerConfig}
+          />
+
+          <MemoryContainsField
             config={triggerConfig}
             onChange={setTriggerConfig}
           />
@@ -441,7 +447,98 @@ function ActionFields({
     )
   }
 
+  if (type === "save_memory") {
+    return (
+      <div className="space-y-3">
+        <Field label="Category">
+          <select
+            value={(config.category as MemoryCategory) ?? "context"}
+            onChange={(e) => update({ category: e.target.value })}
+            className="w-full rounded-[--radius-md] border border-border bg-surface-raised px-3 py-2 text-[14px] text-foreground outline-none transition-colors duration-150 focus:border-accent/60"
+          >
+            {MEMORY_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Content">
+          <TextArea
+            value={(config.content as string) ?? ""}
+            onChange={(v) => update({ content: v })}
+            placeholder="Hit a {{streak}}-day streak on {{name}}"
+          />
+        </Field>
+      </div>
+    )
+  }
+
   return null
+}
+
+// ---------- Cross-cutting condition: memoryContains ----------
+
+function MemoryContainsField({
+  config,
+  onChange,
+}: {
+  config: Record<string, unknown>
+  onChange: (c: Record<string, unknown>) => void
+}) {
+  const current = (config.memoryContains as
+    | { category?: MemoryCategory; text?: string }
+    | undefined) ?? {}
+  const text = current.text ?? ""
+  const category = current.category ?? ""
+
+  function update(patch: { category?: string; text?: string }) {
+    const nextText = patch.text !== undefined ? patch.text : text
+    const nextCategoryRaw =
+      patch.category !== undefined ? patch.category : category
+    const next = { ...config }
+    if (!nextText.trim()) {
+      delete next.memoryContains
+    } else {
+      const memCfg: { category?: MemoryCategory; text: string } = {
+        text: nextText,
+      }
+      if (nextCategoryRaw) memCfg.category = nextCategoryRaw as MemoryCategory
+      next.memoryContains = memCfg
+    }
+    onChange(next)
+  }
+
+  return (
+    <div className="rounded-[--radius-md] border border-border-light bg-background-secondary/40 p-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+        AND a memory contains (optional)
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Text">
+          <TextInput
+            value={text}
+            onChange={(v) => update({ text: v })}
+            placeholder="prefers high priority"
+          />
+        </Field>
+        <Field label="Category (optional)">
+          <select
+            value={category}
+            onChange={(e) => update({ category: e.target.value })}
+            className="w-full rounded-[--radius-md] border border-border bg-surface-raised px-3 py-2 text-[14px] text-foreground outline-none transition-colors duration-150 focus:border-accent/60"
+          >
+            <option value="">Any</option>
+            {MEMORY_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+    </div>
+  )
 }
 
 // ---------- Primitives ----------

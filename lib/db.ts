@@ -208,6 +208,11 @@ sqlite.exec(`
     updated_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_embeddings_kind_ref ON embeddings (kind, ref_id);
+  CREATE TABLE IF NOT EXISTS user_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
 `)
 
 export const db = drizzle(sqlite, { schema })

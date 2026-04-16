@@ -13,6 +13,7 @@ import {
   formatTime,
   priorityRank,
 } from "@/lib/actions/automations"
+import { getSettings } from "@/lib/actions/settings"
 
 export async function POST(request: Request) {
   const unauthorized = guardCronRequest(request)
@@ -154,8 +155,14 @@ export async function POST(request: Request) {
 
     const summary = `Calendar ${events.length} | Tasks ${topTasks.length} | Habits ${allHabits.length}`
 
-    // ---- Recipient resolution ----
+    // ---- Settings + recipient resolution ----
+    const settings = await getSettings(["daily_brief_enabled", "daily_brief_email"])
+    if (settings["daily_brief_enabled"] === "0") {
+      return Response.json({ sent: false, skipped: "disabled_in_settings" })
+    }
+
     const recipient =
+      settings["daily_brief_email"]?.trim() ||
       process.env.LUMA_DAILY_BRIEF_EMAIL?.trim() ||
       (await getAuthenticatedEmailAddress())
 

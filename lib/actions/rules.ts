@@ -1,12 +1,14 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { rules, ruleRuns, conversations, chatMessages } from "@/lib/schema"
+import { rules, ruleRuns, conversations, chatMessages, memories } from "@/lib/schema"
 import { eq, desc, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { sendMessage } from "@/lib/integrations/gmail"
 import { createTask } from "@/lib/actions/tasks"
+import { createMemory } from "@/lib/actions/memories"
+import { MEMORY_CATEGORIES, type MemoryCategory } from "@/lib/memories-types"
 
 // ---------- Types ----------
 
@@ -15,7 +17,16 @@ export type TriggerType =
   | "task.due_today"
   | "habit.streak_hit"
 
-export type ActionType = "create_task" | "log_chat" | "send_email"
+export type ActionType =
+  | "create_task"
+  | "log_chat"
+  | "send_email"
+  | "save_memory"
+
+export interface MemoryContainsCondition {
+  category?: MemoryCategory
+  text: string
+}
 
 export interface TaskStatusChangedPayload {
   taskId: string
@@ -134,14 +145,40 @@ function renderConfig<T extends Record<string, unknown>>(
 }
 
 /**
+ * Cross-cutting condition: gate the rule on whether any memory contains
+ * a substring (optionally restricted to one category). Returns true when
+ * no condition is set OR when at least one matching memory exists.
+ */
+async function passesMemoryContains(
+  triggerConfig: Record<string, unknown>
+): Promise<boolean> {
+  const cond = (triggerConfig as { memoryContains?: MemoryContainsCondition })
+    .memoryContains
+  const text = cond?.text?.trim().toLowerCase()
+  if (!text) return true
+
+  const rows = cond.category
+    ? await db
+        .select()
+        .from(memories)
+        .where(eq(memories.category, cond.category))
+        .all()
+    : await db.select().from(memories).all()
+
+  return rows.some((m) => m.content.toLowerCase().includes(text))
+}
+
+/**
  * Check a trigger payload against a rule's triggerConfig.
  * All conditions within a config are AND-ed. Missing config keys mean "any".
  */
-function matchesTrigger(
+async function matchesTrigger(
   triggerType: TriggerType,
   triggerConfig: Record<string, unknown>,
   payload: TriggerPayload
-): boolean {
+): Promise<boolean> {
+  if (!(await passesMemoryContains(triggerConfig))) return false
+
   if (triggerType === "task.status_changed") {
     const p = payload as TaskStatusChangedPayload
     const cfg = triggerConfig as {
@@ -379,6 +416,26 @@ async function runAction(
     return { status: "success", details: `log_chat: "${message.slice(0, 60)}"` }
   }
 
+  if (actionType === "save_memory") {
+    const cfg = rendered as { category?: string; content?: string }
+    const category = cfg.category as MemoryCategory | undefined
+    const content = (cfg.content ?? "").trim()
+    if (!category || !MEMORY_CATEGORIES.includes(category)) {
+      return {
+        status: "skipped",
+        details: `save_memory: invalid category "${cfg.category ?? ""}"`,
+      }
+    }
+    if (!content) {
+      return { status: "skipped", details: "save_memory: empty content" }
+    }
+    await createMemory(category, content)
+    return {
+      status: "success",
+      details: `save_memory: [${category}] "${content.slice(0, 60)}"`,
+    }
+  }
+
   if (actionType === "send_email") {
     const cfg = rendered as { to?: string; subject?: string; body?: string }
     const to = (cfg.to ?? "").trim()
@@ -422,7 +479,7 @@ export async function evaluateTrigger(
         rule.triggerConfig,
         {}
       )
-      if (!matchesTrigger(triggerType, triggerConfig, payload)) continue
+      if (!(await matchesTrigger(triggerType, triggerConfig, payload))) continue
 
       const actionConfig = parseJson<Record<string, unknown>>(
         rule.actionConfig,

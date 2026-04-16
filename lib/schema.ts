@@ -186,3 +186,9 @@ export const oauthTokens = sqliteTable("oauth_tokens", {
   scope: text("scope").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
+
+export const userSettings = sqliteTable("user_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})

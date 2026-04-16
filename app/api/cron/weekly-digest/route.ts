@@ -5,6 +5,7 @@ import {
   guardCronRequest,
   formatLocalDate,
 } from "@/lib/actions/automations"
+import { getSettings } from "@/lib/actions/settings"
 
 export async function POST(request: Request) {
   const unauthorized = guardCronRequest(request)
@@ -36,10 +37,14 @@ export async function POST(request: Request) {
 
     await saveJournalEntry(today, combined)
 
-    // ---- Optional email (only when LUMA_WEEKLY_DIGEST_EMAIL is set) ----
+    // ---- Optional email (skipped if disabled in settings or no recipient) ----
     let emailed = false
-    const recipient = process.env.LUMA_WEEKLY_DIGEST_EMAIL?.trim()
-    if (recipient) {
+    const settings = await getSettings(["weekly_digest_enabled", "weekly_digest_email"])
+    const enabled = settings["weekly_digest_enabled"] !== "0"
+    const recipient =
+      settings["weekly_digest_email"]?.trim() ||
+      process.env.LUMA_WEEKLY_DIGEST_EMAIL?.trim()
+    if (enabled && recipient) {
       const res = await sendMessage({
         to: recipient,
         subject: `Weekly digest, ${digest.data.startDate} to ${digest.data.endDate}`,

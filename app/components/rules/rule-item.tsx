@@ -196,6 +196,13 @@ function summarizeTriggerConfig(
     if (typeof config.threshold === "number")
       parts.push(`at ${config.threshold} days`)
   }
+  const memCfg = config.memoryContains as
+    | { category?: string; text?: string }
+    | undefined
+  if (memCfg?.text) {
+    const scope = memCfg.category ? `[${memCfg.category}]` : "memory"
+    parts.push(`${scope} contains "${memCfg.text}"`)
+  }
   return parts.length === 0 ? "" : `(${parts.join(", ")})`
 }
 
@@ -211,6 +218,9 @@ function summarizeActionConfig(
   }
   if (type === "send_email" && config.to) {
     return `to ${String(config.to)}`
+  }
+  if (type === "save_memory" && config.category) {
+    return `[${String(config.category)}]${config.content ? ` "${String(config.content).slice(0, 40)}"` : ""}`
   }
   return ""
 }

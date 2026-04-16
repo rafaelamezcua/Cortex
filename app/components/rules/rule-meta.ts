@@ -35,6 +35,7 @@ export const ACTION_TYPES: ActionType[] = [
   "create_task",
   "log_chat",
   "send_email",
+  "save_memory",
 ]
 
 export const ACTION_META: Record<ActionType, ActionTypeMeta> = {
@@ -49,6 +50,10 @@ export const ACTION_META: Record<ActionType, ActionTypeMeta> = {
   send_email: {
     label: "Send email",
     description: "Sends an email via Gmail. Skipped if Gmail is not connected.",
+  },
+  save_memory: {
+    label: "Save memory",
+    description: "Stores a memory Luma will recall in future conversations.",
   },
 }
 

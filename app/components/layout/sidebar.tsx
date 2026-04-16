@@ -16,6 +16,7 @@ import {
   Timer,
   Brain,
   Network,
+  Settings,
 } from "lucide-react"
 import { LumaLogo } from "@/app/components/ui/luma-logo"
 import { ThemeToggle } from "@/app/components/ui/theme-toggle"
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/memories", label: "Memories", icon: Brain },
   { href: "/graph", label: "Graph", icon: Network },
+  { href: "/settings/rules", label: "Settings", icon: Settings },
 ]
 
 export function Sidebar() {

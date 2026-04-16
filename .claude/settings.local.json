@@ -8,7 +8,14 @@
       "Bash(bun run:*)",
       "Bash(bun install:*)",
       "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/taskkill.exe:*)",
-      "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/cmd.exe:*)"
+      "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/cmd.exe:*)",
+      "Bash(curl -s http://localhost:3000/settings/rules)",
+      "Bash(curl -s -o /dev/null -w \"rules: %{http_code}\\\\n\" http://localhost:3000/settings/rules)",
+      "Bash(curl -s -o /dev/null -w \"search: %{http_code}\\\\n\" http://localhost:3000/settings/search)",
+      "Bash(curl -s -o /dev/null -w \"integrations: %{http_code}\\\\n\" http://localhost:3000/settings/integrations)",
+      "Bash(curl -s -o /dev/null -w \"notifications: %{http_code}\\\\n\" http://localhost:3000/settings/notifications)",
+      "Bash(/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe *)",
+      "Bash(/c/Program Files/nodejs/node.exe C:\\\\Users\\\\ramez\\\\Projects\\\\Cortex\\\\node_modules\\\\next\\\\dist\\\\bin\\\\next *)"
     ]
   }
 }
