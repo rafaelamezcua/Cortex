@@ -17,6 +17,9 @@ type Task = {
   order: number
   createdAt: string
   updatedAt: string
+  recurrence?: string | null
+  parentId?: string | null
+  isTemplate?: boolean | null
 }
 
 type ViewMode = "list" | "kanban" | "timeline"
@@ -52,7 +55,7 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
           ))}
         </div>
         <span className="text-xs text-foreground-quaternary">
-          {tasks.filter((t) => t.status !== "done").length} active
+          {tasks.filter((t) => !t.parentId && t.status !== "done").length} active
         </span>
       </div>
 

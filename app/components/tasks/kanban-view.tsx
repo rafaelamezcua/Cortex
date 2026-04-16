@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { toggleTask, deleteTask } from "@/lib/actions/tasks"
-import { Check, Trash2, Clock, AlertTriangle, GripVertical } from "lucide-react"
+import { Check, Trash2, Clock, AlertTriangle, GripVertical, Repeat } from "lucide-react"
 import { useTransition, useState } from "react"
 import { TaskModal } from "./task-modal"
 import {
@@ -27,6 +27,8 @@ type Task = {
   order: number
   createdAt: string
   updatedAt: string
+  recurrence?: string | null
+  parentId?: string | null
 }
 
 const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
@@ -118,6 +120,12 @@ function DraggableCard({
             >
               {task.title}
             </span>
+            {task.recurrence && task.recurrence !== "none" && (
+              <Repeat
+                className="h-3 w-3 shrink-0 text-accent/70"
+                aria-label={`Repeats ${task.recurrence}`}
+              />
+            )}
           </div>
 
           {task.description && (
@@ -163,7 +171,9 @@ function DraggableCard({
   )
 }
 
-export function KanbanView({ tasks }: { tasks: Task[] }) {
+export function KanbanView({ tasks: allTasks }: { tasks: Task[] }) {
+  // Show only top-level tasks on the board. Subtasks belong to the modal.
+  const tasks = allTasks.filter((t) => !t.parentId)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
@@ -263,7 +273,11 @@ export function KanbanView({ tasks }: { tasks: Task[] }) {
       </DndContext>
 
       {editingTask && (
-        <TaskModal task={editingTask} onClose={() => setEditingTask(null)} />
+        <TaskModal
+          task={editingTask}
+          subtasks={allTasks.filter((t) => t.parentId === editingTask.id)}
+          onClose={() => setEditingTask(null)}
+        />
       )}
     </>
   )

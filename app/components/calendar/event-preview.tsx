@@ -1,9 +1,25 @@
 "use client"
 
 import { formatEventTime } from "@/lib/calendar-utils"
-import { Clock, FileText, Pencil, Trash2, X, Upload, Check } from "lucide-react"
+import {
+  Clock,
+  FileText,
+  Pencil,
+  Trash2,
+  X,
+  Upload,
+  Check,
+  StickyNote,
+  Plus,
+} from "lucide-react"
 import { Button } from "@/app/components/ui/button"
 import { useState, useTransition, useEffect } from "react"
+import Link from "next/link"
+import {
+  createNoteForEvent,
+  getNotesForEvent,
+} from "@/lib/actions/notes"
+import { useRouter } from "next/navigation"
 
 type CalendarEvent = {
   id: string
@@ -31,21 +47,79 @@ interface EventPreviewProps {
   onEdit: () => void
 }
 
+type LinkedNote = {
+  id: string
+  title: string
+  updatedAt: string
+}
+
 export function EventPreview({ event, onClose, onEdit }: EventPreviewProps) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [syncing, setSyncing] = useState(false)
   const [synced, setSynced] = useState(false)
   const [googleCals, setGoogleCals] = useState<GoogleCal[]>([])
   const [showSyncPicker, setShowSyncPicker] = useState(false)
+  const [linkedNotes, setLinkedNotes] = useState<LinkedNote[]>([])
+  const [notesLoading, setNotesLoading] = useState(true)
+  const [showNoteInput, setShowNoteInput] = useState(false)
+  const [newNoteTitle, setNewNoteTitle] = useState("")
+  const [creatingNote, setCreatingNote] = useState(false)
   const isGoogle = event.source === "google"
   const isLocal = !isGoogle
 
-  const date = new Date(event.startTime.split("T")[0] + "T12:00:00")
+  const eventDate = event.startTime.split("T")[0]
+  const date = new Date(eventDate + "T12:00:00")
   const dateLabel = date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   })
+
+  // Load notes linked to this event
+  useEffect(() => {
+    let cancelled = false
+    setNotesLoading(true)
+    getNotesForEvent(event.id)
+      .then((rows) => {
+        if (cancelled) return
+        setLinkedNotes(
+          rows.map((r) => ({
+            id: r.id,
+            title: r.title,
+            updatedAt: r.updatedAt,
+          }))
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedNotes([])
+      })
+      .finally(() => {
+        if (!cancelled) setNotesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [event.id])
+
+  async function handleCreateNote() {
+    const trimmed = newNoteTitle.trim()
+    if (!trimmed || creatingNote) return
+    setCreatingNote(true)
+    try {
+      const result = await createNoteForEvent({
+        title: trimmed,
+        eventId: event.id,
+        eventDate,
+      })
+      if (result?.id) {
+        onClose()
+        router.push(`/notes/${result.id}`)
+      }
+    } finally {
+      setCreatingNote(false)
+    }
+  }
 
   // Fetch Google calendars for sync picker
   useEffect(() => {
@@ -209,6 +283,88 @@ export function EventPreview({ event, onClose, onEdit }: EventPreviewProps) {
               </button>
             </div>
           )}
+
+          {/* Related notes */}
+          <div className="mb-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+                Related notes
+              </p>
+              {!showNoteInput && (
+                <button
+                  type="button"
+                  onClick={() => setShowNoteInput(true)}
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-foreground-tertiary outline-none transition-all duration-150 hover:bg-surface-hover hover:text-accent focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                >
+                  <Plus className="h-3 w-3" />
+                  New note
+                </button>
+              )}
+            </div>
+
+            {showNoteInput && (
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={newNoteTitle}
+                  onChange={(e) => setNewNoteTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleCreateNote()
+                    } else if (e.key === "Escape") {
+                      setShowNoteInput(false)
+                      setNewNoteTitle("")
+                    }
+                  }}
+                  placeholder="Note title"
+                  className="h-8 min-w-0 flex-1 rounded-[--radius-md] border border-border bg-surface px-2.5 text-xs font-medium text-foreground outline-none transition-colors duration-150 placeholder:text-foreground-quaternary focus:border-accent/60"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateNote}
+                  disabled={creatingNote || !newNoteTitle.trim()}
+                >
+                  Create
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowNoteInput(false)
+                    setNewNoteTitle("")
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+
+            {notesLoading ? (
+              <p className="text-xs text-foreground-quaternary">Loading...</p>
+            ) : linkedNotes.length === 0 ? (
+              <p className="text-xs text-foreground-quaternary">
+                No notes linked yet.
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {linkedNotes.map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      href={`/notes/${n.id}`}
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-[--radius-md] border border-border-light bg-surface px-2.5 py-2 text-xs text-foreground outline-none transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                    >
+                      <StickyNote className="h-3.5 w-3.5 shrink-0 text-foreground-tertiary" />
+                      <span className="truncate">{n.title}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2">

@@ -8,6 +8,7 @@ import { DailyBriefing } from "@/app/components/dashboard/daily-briefing"
 import { BrainWidget } from "@/app/components/dashboard/brain-widget"
 import { CanvasWidget } from "@/app/components/dashboard/canvas-widget"
 import { HabitsWidget } from "@/app/components/dashboard/habits-widget"
+import { LumaStrip } from "@/app/components/dashboard/luma-strip"
 import { isCanvasConnected } from "@/lib/integrations/canvas"
 import { getHabits, getHabitLogs } from "@/lib/actions/habits"
 import { getTasks } from "@/lib/actions/tasks"
@@ -180,6 +181,9 @@ export default async function DashboardPage() {
           {lumaLine}
         </p>
       </section>
+
+      {/* Proactive nudges */}
+      <LumaStrip />
 
       {/* Today hero */}
       <DailyBriefing events={todaysEvents} tasks={tasks} />

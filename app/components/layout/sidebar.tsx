@@ -8,21 +8,19 @@ import {
   CheckSquare,
   FileText,
   ChevronLeft,
-  Sun,
-  Moon,
-  Monitor,
   Menu,
   X,
   Flame,
   BookOpen,
   FolderKanban,
   Timer,
+  Brain,
 } from "lucide-react"
 import { LumaLogo } from "@/app/components/ui/luma-logo"
+import { ThemeToggle } from "@/app/components/ui/theme-toggle"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
-import { useTheme } from "@/app/components/theme-provider"
+import { useEffect, useRef, useState } from "react"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -34,36 +32,54 @@ const navItems = [
   { href: "/habits", label: "Habits", icon: Flame },
   { href: "/focus", label: "Focus", icon: Timer },
   { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/memories", label: "Memories", icon: Brain },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { theme, setTheme, resolved } = useTheme()
+  const drawerRef = useRef<HTMLElement>(null)
 
+  // Close drawer when route changes.
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
 
-  function cycleTheme() {
-    if (theme === "light") setTheme("dark")
-    else if (theme === "dark") setTheme("system")
-    else setTheme("light")
-  }
+  // Close on Escape when the drawer is open.
+  useEffect(() => {
+    if (!mobileOpen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [mobileOpen])
 
-  const ThemeIcon = theme === "system" ? Monitor : resolved === "dark" ? Moon : Sun
-  const themeLabel =
-    theme === "system" ? "System" : theme === "dark" ? "Dark" : "Light"
+  // Lock body scroll while drawer is open.
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileOpen])
 
   const sidebarContent = (
     <>
       {/* Logo + wordmark with Luma aura */}
       <div className="relative flex flex-col items-center px-5 pt-7 pb-5">
-        {/* Mobile close button, top-right */}
+        {/* Mobile close button, top-right. Hidden >=lg because the drawer is gone. */}
         <button
+          type="button"
           onClick={() => setMobileOpen(false)}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-[--radius-sm] text-foreground-tertiary transition-colors duration-200 hover:bg-surface-hover hover:text-foreground md:hidden"
+          className={cn(
+            "absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-[--radius-sm] text-foreground-tertiary transition-colors duration-200",
+            "hover:bg-surface-hover hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-ring)]",
+            "lg:hidden",
+          )}
           aria-label="Close menu"
         >
           <X className="h-4 w-4" />
@@ -95,7 +111,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 px-3 pt-2">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pt-2">
         {navItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -106,17 +122,19 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex h-11 items-center gap-3 rounded-[--radius-md] px-3 text-[13px] font-medium transition-all duration-200",
+                "flex h-11 items-center gap-3 rounded-[--radius-md] px-3 text-[13px] font-medium transition-colors duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-ring)]",
                 isActive
                   ? "bg-accent/10 text-accent"
-                  : "text-foreground-secondary hover:bg-surface-hover hover:text-foreground"
+                  : "text-foreground-secondary hover:bg-surface-hover hover:text-foreground",
               )}
             >
               <item.icon
                 className={cn(
                   "h-[18px] w-[18px] shrink-0",
-                  isActive && "text-accent"
+                  isActive && "text-accent",
                 )}
               />
               {!collapsed && <span>{item.label}</span>}
@@ -126,25 +144,25 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom controls */}
-      <div className="border-t border-border-light/50 p-3 space-y-0.5">
-        <button
-          onClick={cycleTheme}
-          className="flex h-11 w-full items-center justify-center gap-3 rounded-[--radius-md] px-3 text-[13px] text-foreground-tertiary transition-all duration-200 hover:bg-surface-hover hover:text-foreground"
-          aria-label={`Theme: ${themeLabel}`}
-        >
-          <ThemeIcon className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && <span className="font-medium">{themeLabel}</span>}
-        </button>
+      <div className="space-y-0.5 border-t border-border-light/50 p-3">
+        <ThemeToggle compact={collapsed} />
 
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden h-11 w-full items-center justify-center gap-3 rounded-[--radius-md] px-3 text-[13px] text-foreground-tertiary transition-all duration-200 hover:bg-surface-hover hover:text-foreground md:flex"
+          className={cn(
+            "hidden h-11 w-full items-center justify-center gap-3 rounded-[--radius-md] px-3 text-[13px] text-foreground-tertiary transition-colors duration-200",
+            "hover:bg-surface-hover hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-ring)]",
+            "lg:flex",
+          )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
         >
           <ChevronLeft
             className={cn(
               "h-[18px] w-[18px] shrink-0 transition-transform duration-300",
-              collapsed && "rotate-180"
+              collapsed && "rotate-180",
             )}
           />
           {!collapsed && <span className="font-medium">Collapse</span>}
@@ -155,38 +173,57 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile hamburger */}
+      {/* Mobile hamburger — lives in the top of the main content area, hidden >=lg. */}
       <button
+        type="button"
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-glass-surface-floating backdrop-blur-xl border border-border-light shadow-md transition-colors duration-150 ease-out hover:bg-surface-hover md:hidden"
+        className={cn(
+          "fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-[--radius-md] bg-glass-surface-floating backdrop-blur-xl border border-border-light shadow-md",
+          "transition-colors duration-150 ease-out hover:bg-surface-hover",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-ring)]",
+          "lg:hidden",
+        )}
         aria-label="Open menu"
+        aria-expanded={mobileOpen}
+        aria-controls="sidebar-drawer"
       >
         <Menu className="h-5 w-5 text-foreground" />
       </button>
 
-      {/* Mobile backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile drawer */}
-      <aside
+      {/* Mobile backdrop — token-driven scrim, fades via opacity (GPU-friendly). */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[--sidebar-width] flex-col bg-glass-sidebar backdrop-blur-2xl border-r border-border-light/40 transition-transform duration-300 ease-out md:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-0 z-40 bg-[color:var(--scrim)] backdrop-blur-sm transition-opacity duration-[--duration-normal] ease-[--ease-out] lg:hidden",
+          mobileOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0",
+        )}
+      />
+
+      {/* Mobile drawer — slides via transform only, respects reduced motion. */}
+      <aside
+        id="sidebar-drawer"
+        ref={drawerRef}
+        role="dialog"
+        aria-modal={mobileOpen ? "true" : undefined}
+        aria-label="Navigation drawer"
+        aria-hidden={!mobileOpen}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-[--sidebar-width] max-w-[85vw] flex-col bg-glass-sidebar backdrop-blur-2xl border-r border-border-light/40",
+          "transition-transform duration-[--duration-normal] ease-[--ease-out] will-change-transform lg:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {sidebarContent}
       </aside>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — shown at >=lg (1024px). */}
       <aside
         className={cn(
-          "hidden h-full flex-col border-r border-border-light/40 bg-glass-sidebar backdrop-blur-2xl transition-all duration-300 ease-out md:flex",
-          collapsed ? "w-[--sidebar-collapsed-width]" : "w-[--sidebar-width]"
+          "hidden h-full flex-col border-r border-border-light/40 bg-glass-sidebar backdrop-blur-2xl transition-[width] duration-300 ease-out lg:flex",
+          collapsed ? "w-[--sidebar-collapsed-width]" : "w-[--sidebar-width]",
         )}
       >
         {sidebarContent}

@@ -166,5 +166,17 @@ try {
 try {
   sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN calendar_id TEXT`)
 } catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE tasks ADD COLUMN recurrence TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE tasks ADD COLUMN parent_id TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE tasks ADD COLUMN is_template INTEGER NOT NULL DEFAULT 0`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN parent_id TEXT`)
+} catch { /* column already exists */ }
 
 export const db = drizzle(sqlite, { schema })

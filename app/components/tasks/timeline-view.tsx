@@ -15,6 +15,8 @@ type Task = {
   order: number
   createdAt: string
   updatedAt: string
+  recurrence?: string | null
+  parentId?: string | null
 }
 
 const priorityColors: Record<string, string> = {
@@ -64,9 +66,10 @@ export function TimelineView({ tasks: initialTasks }: { tasks: Task[] }) {
     })
   }
 
+  const rootTasks = tasks.filter((t) => !t.parentId)
   const allDisplayTasks = [
-    ...tasks.filter((t) => t.dueDate && t.status !== "done"),
-    ...tasks.filter((t) => t.dueDate && t.status === "done"),
+    ...rootTasks.filter((t) => t.dueDate && t.status !== "done"),
+    ...rootTasks.filter((t) => t.dueDate && t.status === "done"),
   ].slice(0, 25)
 
   // Bar position: due date determines the END of the bar, 1 day wide
@@ -262,7 +265,11 @@ export function TimelineView({ tasks: initialTasks }: { tasks: Task[] }) {
       </div>
 
       {editingTask && (
-        <TaskModal task={editingTask} onClose={handleModalClose} />
+        <TaskModal
+          task={editingTask}
+          subtasks={tasks.filter((t) => t.parentId === editingTask.id)}
+          onClose={handleModalClose}
+        />
       )}
     </>
   )

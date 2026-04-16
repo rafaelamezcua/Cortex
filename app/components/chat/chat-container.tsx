@@ -1,8 +1,9 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport, isToolUIPart, getToolName } from "ai"
 import { MessageBubble } from "./message-bubble"
+import type { ToolInvocation } from "./tool-chips"
 import { ChatInput } from "./chat-input"
 import { LumaLogo } from "@/app/components/ui/luma-logo"
 import { VaultAttachButton } from "@/app/components/ui/vault-attach-button"
@@ -112,6 +113,27 @@ export function ChatContainer({
     return message.parts.filter((p) => p.type === "file") as { type: string; data?: string; mediaType?: string }[]
   }
 
+  // Extract tool invocations from a message's parts.
+  // AI SDK v6: tool parts have type `tool-<name>` (static) or `dynamic-tool` (dynamic).
+  // On historical messages without persisted parts, this will simply return [].
+  function getMessageTools(message: UIMessage): ToolInvocation[] {
+    const out: ToolInvocation[] = []
+    for (const part of message.parts) {
+      if (!isToolUIPart(part)) continue
+      const p = part as {
+        type: string
+        toolCallId?: string
+        state?: ToolInvocation["state"]
+      }
+      out.push({
+        id: p.toolCallId ?? `${p.type}-${out.length}`,
+        name: getToolName(part),
+        state: p.state ?? "unknown",
+      })
+    }
+    return out
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Chat header — save action, only shown when there are messages */}
@@ -176,8 +198,13 @@ export function ChatContainer({
               .map((message) => {
                 const text = getMessageText(message)
                 const msgFiles = getMessageFiles(message)
+                const tools =
+                  message.role === "assistant"
+                    ? getMessageTools(message)
+                    : []
 
-                if (!text && msgFiles.length === 0) return null
+                if (!text && msgFiles.length === 0 && tools.length === 0)
+                  return null
                 return (
                   <div key={message.id}>
                     {/* Show attached files above message */}
@@ -203,10 +230,12 @@ export function ChatContainer({
                         </div>
                       </div>
                     )}
-                    {text && (
+                    {(text || tools.length > 0) && (
                       <MessageBubble
                         role={message.role as "user" | "assistant"}
                         content={text}
+                        tools={tools}
+                        canRemember={message.role === "assistant"}
                       />
                     )}
                   </div>

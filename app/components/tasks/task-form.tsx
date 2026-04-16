@@ -2,7 +2,7 @@
 
 import { createTask } from "@/lib/actions/tasks"
 import { Button } from "@/app/components/ui/button"
-import { Plus, Calendar as CalendarIcon } from "lucide-react"
+import { Plus, Calendar as CalendarIcon, Repeat } from "lucide-react"
 import { useRef, useState, useEffect } from "react"
 
 interface CalendarInfo {
@@ -91,6 +91,23 @@ export function TaskForm() {
           type="date"
           className="h-9 rounded-[--radius-md] border border-border bg-background px-3 text-xs text-foreground-secondary outline-none"
         />
+
+        <label className="flex h-9 items-center gap-1.5 rounded-[--radius-md] border border-border bg-background px-3 text-xs text-foreground-secondary focus-within:border-accent/60">
+          <Repeat className="h-3 w-3 text-foreground-quaternary" />
+          <select
+            name="recurrence"
+            defaultValue="none"
+            aria-label="Recurrence"
+            className="bg-transparent outline-none"
+          >
+            <option value="none">No repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
 
         {/* Add to calendar toggle */}
         <button

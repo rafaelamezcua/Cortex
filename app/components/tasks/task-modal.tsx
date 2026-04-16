@@ -1,9 +1,14 @@
 "use client"
 
-import { updateTask, deleteTask } from "@/lib/actions/tasks"
+import {
+  updateTask,
+  deleteTask,
+  addSubtask,
+  toggleTask,
+} from "@/lib/actions/tasks"
 import { Button } from "@/app/components/ui/button"
-import { X, Trash2, Save } from "lucide-react"
-import { useState, useTransition, useRef, useEffect } from "react"
+import { X, Trash2, Save, Plus, Check, Repeat } from "lucide-react"
+import { useState, useTransition, useEffect } from "react"
 import { cn } from "@/lib/utils"
 
 type Task = {
@@ -13,22 +18,42 @@ type Task = {
   status: string
   priority: string
   dueDate: string | null
+  recurrence?: string | null
+}
+
+type Subtask = {
+  id: string
+  title: string
+  status: string
+  priority: string
 }
 
 interface TaskModalProps {
   task: Task
+  subtasks?: Subtask[]
   onClose: () => void
 }
 
-export function TaskModal({ task, onClose }: TaskModalProps) {
+const RECURRENCE_OPTIONS: { value: string; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "daily", label: "Daily" },
+  { value: "weekdays", label: "Weekdays" },
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Biweekly" },
+  { value: "monthly", label: "Monthly" },
+]
+
+export function TaskModal({ task, subtasks = [], onClose }: TaskModalProps) {
   const [isPending, startTransition] = useTransition()
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description || "")
   const [priority, setPriority] = useState(task.priority)
   const [status, setStatus] = useState(task.status)
   const [dueDate, setDueDate] = useState(task.dueDate || "")
+  const [recurrence, setRecurrence] = useState<string>(task.recurrence || "none")
   const [hasChanges, setHasChanges] = useState(false)
   const [saveStatus, setSaveStatus] = useState("")
+  const [newSubtask, setNewSubtask] = useState("")
 
   // Track changes
   useEffect(() => {
@@ -37,9 +62,10 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
       description !== (task.description || "") ||
       priority !== task.priority ||
       status !== task.status ||
-      dueDate !== (task.dueDate || "")
+      dueDate !== (task.dueDate || "") ||
+      recurrence !== (task.recurrence || "none")
     setHasChanges(changed)
-  }, [title, description, priority, status, dueDate, task])
+  }, [title, description, priority, status, dueDate, recurrence, task])
 
   function save() {
     startTransition(async () => {
@@ -50,6 +76,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
       formData.set("priority", priority)
       formData.set("dueDate", dueDate)
       formData.set("status", status)
+      formData.set("recurrence", recurrence)
       await updateTask(task.id, formData)
       setHasChanges(false)
       setSaveStatus("Saved")
@@ -62,6 +89,15 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
     startTransition(async () => {
       await deleteTask(task.id)
       onClose()
+    })
+  }
+
+  function submitSubtask() {
+    const trimmed = newSubtask.trim()
+    if (!trimmed) return
+    startTransition(async () => {
+      await addSubtask(task.id, trimmed)
+      setNewSubtask("")
     })
   }
 
@@ -113,7 +149,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
             )}
             <button
               onClick={onClose}
-              className="rounded-[--radius-sm] p-1.5 text-foreground-tertiary hover:bg-surface-hover hover:text-foreground transition-colors"
+              className="rounded-[--radius-sm] p-1.5 text-foreground-tertiary hover:bg-surface-hover hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <X className="h-4 w-4" />
             </button>
@@ -141,7 +177,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
                     key={s.value}
                     onClick={() => setStatus(s.value)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all",
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                       status === s.value
                         ? "border-accent bg-accent-light text-accent"
                         : "border-border text-foreground-tertiary hover:border-accent/30"
@@ -164,7 +200,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
                     key={p.value}
                     onClick={() => setPriority(p.value)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all",
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                       priority === p.value
                         ? "border-accent bg-accent-light text-accent"
                         : "border-border text-foreground-tertiary hover:border-accent/30"
@@ -178,17 +214,74 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
             </div>
           </div>
 
-          {/* Due Date */}
+          {/* Due Date + Recurrence */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+                Due Date
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
+                <Repeat className="h-3 w-3" />
+                Recurrence
+              </label>
+              <select
+                value={recurrence}
+                onChange={(e) => setRecurrence(e.target.value)}
+                className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent transition-colors"
+              >
+                {RECURRENCE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Subtasks */}
           <div className="space-y-2">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-foreground-quaternary">
-              Due Date
+              Subtasks ({subtasks.filter((s) => s.status === "done").length} /{" "}
+              {subtasks.length})
             </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="h-10 w-full rounded-[--radius-md] border border-border-light bg-background px-3 text-sm text-foreground outline-none focus:border-accent transition-colors"
-            />
+            <ul className="space-y-1">
+              {subtasks.map((sub) => (
+                <SubtaskRow key={sub.id} subtask={sub} />
+              ))}
+            </ul>
+            <div className="flex items-center gap-2 rounded-[--radius-md] border border-dashed border-border px-3 py-2 focus-within:border-accent/60 transition-colors">
+              <Plus className="h-3.5 w-3.5 text-foreground-quaternary" />
+              <input
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    submitSubtask()
+                  }
+                }}
+                placeholder="Add a subtask"
+                className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-quaternary"
+              />
+              {newSubtask.trim() && (
+                <button
+                  type="button"
+                  onClick={submitSubtask}
+                  disabled={isPending}
+                  className="rounded-[--radius-sm] bg-accent px-2 py-1 text-[11px] font-medium text-white disabled:opacity-40"
+                >
+                  Add
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Description */}
@@ -210,7 +303,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
             <button
               onClick={handleDelete}
               disabled={isPending}
-              className="flex items-center gap-1.5 rounded-[--radius-md] px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-[--radius-md] px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete task
@@ -229,5 +322,48 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+function SubtaskRow({ subtask }: { subtask: Subtask }) {
+  const [isPending, startTransition] = useTransition()
+  const isDone = subtask.status === "done"
+  return (
+    <li
+      className={cn(
+        "flex items-center gap-2 rounded-[--radius-sm] px-2 py-1.5 transition-colors hover:bg-surface-hover",
+        isPending && "pointer-events-none opacity-60"
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => startTransition(() => toggleTask(subtask.id))}
+        aria-label={isDone ? "Mark subtask incomplete" : "Mark subtask complete"}
+        className={cn(
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+          isDone
+            ? "border-accent bg-accent"
+            : "border-foreground-quaternary hover:border-accent hover:bg-accent/5"
+        )}
+      >
+        {isDone && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+      </button>
+      <span
+        className={cn(
+          "flex-1 text-sm",
+          isDone ? "text-foreground-tertiary line-through" : "text-foreground"
+        )}
+      >
+        {subtask.title}
+      </span>
+      <button
+        type="button"
+        onClick={() => startTransition(() => deleteTask(subtask.id))}
+        aria-label="Delete subtask"
+        className="rounded-[--radius-sm] p-1 text-foreground-quaternary transition-colors duration-150 hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
+    </li>
   )
 }

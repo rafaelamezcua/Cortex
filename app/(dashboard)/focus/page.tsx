@@ -1,8 +1,21 @@
-import { PomodoroTimer } from "@/app/components/pomodoro/pomodoro-timer"
+export const dynamic = "force-dynamic"
 
-export default function FocusPage() {
+import { FocusTimer } from "@/app/components/focus/focus-timer"
+import { WeeklyStats } from "@/app/components/focus/weekly-stats"
+import { getWeekStats } from "@/lib/actions/focus"
+import { getTasks } from "@/lib/actions/tasks"
+
+export default async function FocusPage() {
+  const [tasks, stats] = await Promise.all([getTasks(), getWeekStats()])
+
+  const taskOptions = tasks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status,
+  }))
+
   return (
-    <div className="mx-auto max-w-md space-y-10">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-10">
       <section className="text-center">
         <h1
           className="text-3xl font-medium tracking-tight"
@@ -16,7 +29,9 @@ export default function FocusPage() {
         </p>
       </section>
 
-      <PomodoroTimer />
+      <FocusTimer tasks={taskOptions} />
+
+      <WeeklyStats stats={stats} />
     </div>
   )
 }

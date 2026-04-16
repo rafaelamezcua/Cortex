@@ -13,18 +13,57 @@ export async function createNote(formData: FormData) {
   if (!title?.trim()) return
 
   const id = nanoid()
+  const eventId = (formData.get("eventId") as string) || null
+  const eventDate = (formData.get("eventDate") as string) || null
 
   await db.insert(notes).values({
     id,
     title: title.trim(),
     content: "",
+    eventId,
+    eventDate,
     createdAt: now,
     updatedAt: now,
   })
 
   revalidatePath("/notes")
   revalidatePath("/")
+  revalidatePath("/calendar")
   redirect(`/notes/${id}`)
+}
+
+export async function createNoteForEvent(params: {
+  title: string
+  eventId: string
+  eventDate: string
+}): Promise<{ id: string } | null> {
+  if (!params.title?.trim()) return null
+
+  const now = new Date().toISOString()
+  const id = nanoid()
+
+  await db.insert(notes).values({
+    id,
+    title: params.title.trim(),
+    content: "",
+    eventId: params.eventId,
+    eventDate: params.eventDate,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  revalidatePath("/notes")
+  revalidatePath("/calendar")
+  return { id }
+}
+
+export async function getNotesForEvent(eventId: string) {
+  if (!eventId) return []
+  return db
+    .select()
+    .from(notes)
+    .where(eq(notes.eventId, eventId))
+    .all()
 }
 
 export async function updateNote(id: string, content: string) {

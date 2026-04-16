@@ -116,6 +116,11 @@ export async function isVaultAvailable(): Promise<boolean> {
   }
 }
 
+export function isVaultConfigured(): boolean {
+  const raw = process.env.LUMA_BRAIN_PATH
+  return typeof raw === "string" && raw.trim().length > 0
+}
+
 // ============================================================
 // Write path — attach Luma content to the Obsidian vault
 // ============================================================

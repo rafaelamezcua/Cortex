@@ -1,13 +1,17 @@
 export const dynamic = "force-dynamic"
 
-import { getTasks } from "@/lib/actions/tasks"
+import { getTasks, getTaskTemplates } from "@/lib/actions/tasks"
 import { TaskForm } from "@/app/components/tasks/task-form"
 import { TasksView } from "@/app/components/tasks/tasks-view"
+import { TemplatesSection } from "@/app/components/tasks/templates-section"
 
-function composeTasksLine(tasks: { status: string; dueDate: string | null }[]): string {
-  const active = tasks.filter((t) => t.status !== "done")
+function composeTasksLine(
+  tasks: { status: string; dueDate: string | null; parentId?: string | null }[]
+): string {
+  const roots = tasks.filter((t) => !t.parentId)
+  const active = roots.filter((t) => t.status !== "done")
   if (active.length === 0) {
-    return tasks.length === 0
+    return roots.length === 0
       ? "Nothing here yet. Add your first task below."
       : "All caught up. Nice work."
   }
@@ -29,7 +33,7 @@ function composeTasksLine(tasks: { status: string; dueDate: string | null }[]): 
 }
 
 export default async function TasksPage() {
-  const tasks = await getTasks()
+  const [tasks, templates] = await Promise.all([getTasks(), getTaskTemplates()])
   const tasksLine = composeTasksLine(tasks)
 
   return (
@@ -47,6 +51,7 @@ export default async function TasksPage() {
       </section>
 
       <TaskForm />
+      <TemplatesSection templates={templates} />
       <TasksView tasks={tasks} />
     </div>
   )

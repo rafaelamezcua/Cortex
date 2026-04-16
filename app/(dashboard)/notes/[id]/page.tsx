@@ -6,6 +6,7 @@ import { Button } from "@/app/components/ui/button"
 import { ArrowLeft, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { isVaultConfigured } from "@/lib/integrations/luma-brain"
 
 export default async function NotePage({
   params,
@@ -16,6 +17,8 @@ export default async function NotePage({
   const note = await getNote(id)
 
   if (!note) notFound()
+
+  const vaultConfigured = isVaultConfigured()
 
   return (
     <div className="space-y-6">
@@ -29,7 +32,7 @@ export default async function NotePage({
           Notes
         </Link>
         <div className="flex items-center gap-2">
-          <NoteVaultButton noteId={id} />
+          <NoteVaultButton noteId={id} configured={vaultConfigured} />
           <form
             action={async () => {
               "use server"

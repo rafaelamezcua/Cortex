@@ -6,6 +6,7 @@ import {
   saveChatToVault,
   saveTaskToVault,
   isVaultAvailable,
+  isVaultConfigured,
   type VaultWriteResult,
 } from "@/lib/integrations/luma-brain"
 import { db } from "@/lib/db"
@@ -20,6 +21,10 @@ import { eq } from "drizzle-orm"
 
 export async function checkVaultAvailable(): Promise<boolean> {
   return isVaultAvailable()
+}
+
+export async function checkVaultConfigured(): Promise<boolean> {
+  return isVaultConfigured()
 }
 
 export async function attachNoteToVault(

@@ -27,6 +27,10 @@ function getSystemTheme(): "light" | "dark" {
     : "light"
 }
 
+function applyTheme(resolved: "light" | "dark") {
+  document.documentElement.setAttribute("data-theme", resolved)
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system")
   const [resolved, setResolved] = useState<"light" | "dark">("light")
@@ -34,22 +38,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Load saved preference on mount
   useEffect(() => {
     const saved = localStorage.getItem("luma-theme") as Theme | null
-    if (saved) {
+    if (saved === "light" || saved === "dark" || saved === "system") {
       setThemeState(saved)
     }
   }, [])
 
   // Apply theme to <html> and resolve
   useEffect(() => {
-    const root = document.documentElement
     const resolvedTheme = theme === "system" ? getSystemTheme() : theme
-
-    if (resolvedTheme === "dark") {
-      root.classList.add("dark")
-    } else {
-      root.classList.remove("dark")
-    }
-
+    applyTheme(resolvedTheme)
     setResolved(resolvedTheme)
   }, [theme])
 
@@ -61,11 +58,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const handler = () => {
       const resolvedTheme = getSystemTheme()
       setResolved(resolvedTheme)
-      if (resolvedTheme === "dark") {
-        document.documentElement.classList.add("dark")
-      } else {
-        document.documentElement.classList.remove("dark")
-      }
+      applyTheme(resolvedTheme)
     }
 
     mq.addEventListener("change", handler)
@@ -74,7 +67,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   function setTheme(t: Theme) {
     setThemeState(t)
-    localStorage.setItem("luma-theme", t)
+    try {
+      localStorage.setItem("luma-theme", t)
+    } catch {
+      // Storage can be disabled (private mode, etc.). Fail silently.
+    }
   }
 
   return (

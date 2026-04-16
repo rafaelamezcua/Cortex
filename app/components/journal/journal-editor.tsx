@@ -13,6 +13,7 @@ interface JournalEditorProps {
     mood: number | null
   }
   initialDate: string
+  vaultConfigured?: boolean
 }
 
 const moods = [
@@ -23,7 +24,11 @@ const moods = [
   { value: 5, emoji: "😄", label: "Great" },
 ]
 
-export function JournalEditor({ initialEntry, initialDate }: JournalEditorProps) {
+export function JournalEditor({
+  initialEntry,
+  initialDate,
+  vaultConfigured = true,
+}: JournalEditorProps) {
   const [date, setDate] = useState(initialDate)
   const [content, setContent] = useState(initialEntry?.content || "")
   const [mood, setMood] = useState<number | null>(initialEntry?.mood || null)
@@ -142,6 +147,8 @@ export function JournalEditor({ initialEntry, initialDate }: JournalEditorProps)
           <VaultAttachButton
             onAttach={() => attachJournalToVault(date)}
             label="Save to Obsidian"
+            disabled={!vaultConfigured}
+            disabledReason="Set LUMA_BRAIN_PATH in .env to enable vault sync."
           />
           <span
             className={cn(

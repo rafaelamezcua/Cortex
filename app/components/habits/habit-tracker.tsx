@@ -50,24 +50,34 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
     )
   }
 
-  // Calculate streaks
-  function getStreak(habitId: string): number {
+  // Calculate streaks. A day counts as "hit" only if count >= targetPerDay.
+  function getStreak(habitId: string, target: number): number {
     let streak = 0
     for (let i = 0; i < 365; i++) {
       const d = new Date()
       d.setDate(d.getDate() - i)
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
       const count = logMap.get(`${habitId}:${dateStr}`) || 0
-      if (count > 0) {
+      if (count >= target) {
         streak++
       } else if (i === 0) {
-        // Today not done yet, keep checking
+        // Today not hit yet is okay — keep looking back from yesterday.
         continue
       } else {
         break
       }
     }
     return streak
+  }
+
+  // Count "hit" days in the last 30 days (honors targetPerDay).
+  function getHitDays(habitId: string, target: number): number {
+    let hits = 0
+    for (const day of days) {
+      const count = logMap.get(`${habitId}:${day}`) || 0
+      if (count >= target) hits++
+    }
+    return hits
   }
 
   if (habits.length === 0) {
@@ -89,7 +99,8 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
   return (
     <div className="space-y-4">
       {habits.map((habit) => {
-        const streak = getStreak(habit.id)
+        const streak = getStreak(habit.id, habit.targetPerDay)
+        const hits = getHitDays(habit.id, habit.targetPerDay)
         const todayCount = logMap.get(`${habit.id}:${todayStr}`) || 0
         const completed = todayCount >= habit.targetPerDay
 
@@ -115,7 +126,7 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
                   <h3 className="truncate text-[15px] font-semibold text-foreground">
                     {habit.name}
                   </h3>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                     {streak > 0 ? (
                       <span className="flex items-center gap-1 font-medium text-warning">
                         <Flame className="h-3 w-3" />
@@ -126,6 +137,13 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
                         No streak yet
                       </span>
                     )}
+                    <span className="text-foreground-quaternary">·</span>
+                    <span
+                      className="rounded-full bg-accent-subtle px-2 py-0.5 text-[11px] font-medium text-accent"
+                      title={`${hits} of the last ${STREAK_DAYS} days hit the target of ${habit.targetPerDay}`}
+                    >
+                      {hits} / {STREAK_DAYS} days
+                    </span>
                     <span className="text-foreground-quaternary">·</span>
                     <span className="capitalize text-foreground-quaternary">
                       {habit.frequency}
@@ -175,11 +193,13 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
               </div>
             </div>
 
-            {/* Streak grid — last 30 days */}
+            {/* Streak grid, last 30 days. Full color = hit target. Dim = logged but under target. */}
             <div className="flex gap-[3px]">
               {days.map((day) => {
                 const count = logMap.get(`${habit.id}:${day}`) || 0
                 const isToday = day === todayStr
+                const hit = count >= habit.targetPerDay
+                const partial = count > 0 && !hit
 
                 return (
                   <button
@@ -195,14 +215,20 @@ export function HabitTracker({ habits, logs, todayStr }: HabitTrackerProps) {
                       })
                     }
                     disabled={isPending}
-                    title={`${day}${count > 0 ? `, ${count}x` : ""}`}
+                    title={`${day}${count > 0 ? `, ${count} / ${habit.targetPerDay}` : ""}`}
                     className={cn(
-                      "h-5 flex-1 rounded-[4px] transition-all duration-150 hover:scale-y-110 hover:opacity-100",
+                      "h-5 flex-1 rounded-[4px] transition-all duration-150 hover:scale-y-110 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                       isToday &&
                         "ring-2 ring-accent ring-offset-2 ring-offset-surface",
-                      count > 0 ? "opacity-100" : "bg-background-tertiary opacity-50"
+                      hit
+                        ? "opacity-100"
+                        : partial
+                          ? "opacity-60"
+                          : "bg-background-tertiary opacity-50"
                     )}
-                    style={count > 0 ? { backgroundColor: habit.color } : undefined}
+                    style={
+                      count > 0 ? { backgroundColor: habit.color } : undefined
+                    }
                   />
                 )
               })}

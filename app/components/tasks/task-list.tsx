@@ -15,6 +15,9 @@ type Task = {
   order: number
   createdAt: string
   updatedAt: string
+  recurrence?: string | null
+  parentId?: string | null
+  isTemplate?: boolean | null
 }
 
 type Filter = "all" | "active" | "done"
@@ -29,7 +32,18 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
   const [filter, setFilter] = useState<Filter>("all")
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  const filtered = tasks.filter((t) => {
+  // Split top-level tasks and subtasks.
+  const roots = tasks.filter((t) => !t.parentId)
+  const childrenByParent = new Map<string, Task[]>()
+  for (const t of tasks) {
+    if (t.parentId) {
+      const arr = childrenByParent.get(t.parentId) ?? []
+      arr.push(t)
+      childrenByParent.set(t.parentId, arr)
+    }
+  }
+
+  const filtered = roots.filter((t) => {
     if (filter === "active") return t.status !== "done"
     if (filter === "done") return t.status === "done"
     return true
@@ -70,6 +84,7 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
             <TaskItem
               key={task.id}
               task={task}
+              subtasks={childrenByParent.get(task.id) ?? []}
               onClick={() => setEditingTask(task)}
             />
           ))
@@ -80,6 +95,7 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
       {editingTask && (
         <TaskModal
           task={editingTask}
+          subtasks={childrenByParent.get(editingTask.id) ?? []}
           onClose={() => setEditingTask(null)}
         />
       )}

@@ -12,6 +12,11 @@ export const tasks = sqliteTable("tasks", {
     .default("medium"),
   dueDate: text("due_date"),
   order: integer("order").notNull().default(0),
+  recurrence: text("recurrence", {
+    enum: ["none", "daily", "weekdays", "weekly", "biweekly", "monthly"],
+  }),
+  parentId: text("parent_id"),
+  isTemplate: integer("is_template", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
@@ -82,6 +87,7 @@ export const projectTasks = sqliteTable("project_tasks", {
   dueDate: text("due_date"),
   calendarId: text("calendar_id"),
   order: integer("order").notNull().default(0),
+  parentId: text("parent_id"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })

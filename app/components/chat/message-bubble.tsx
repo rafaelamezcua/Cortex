@@ -1,13 +1,22 @@
 import { cn } from "@/lib/utils"
 import { LumaLogo } from "@/app/components/ui/luma-logo"
 import ReactMarkdown from "react-markdown"
+import { ToolChips, type ToolInvocation } from "./tool-chips"
+import { RememberButton } from "./remember-button"
 
 interface MessageBubbleProps {
   role: "user" | "assistant"
   content: string
+  tools?: ToolInvocation[]
+  canRemember?: boolean
 }
 
-export function MessageBubble({ role, content }: MessageBubbleProps) {
+export function MessageBubble({
+  role,
+  content,
+  tools = [],
+  canRemember = false,
+}: MessageBubbleProps) {
   if (role === "user") {
     return (
       <div className="flex justify-end">
@@ -84,6 +93,14 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
             {content}
           </ReactMarkdown>
         </div>
+
+        {tools.length > 0 && <ToolChips tools={tools} />}
+
+        {canRemember && content.trim().length > 0 && (
+          <div className="mt-2 flex items-center">
+            <RememberButton sourceText={content} />
+          </div>
+        )}
       </div>
     </div>
   )

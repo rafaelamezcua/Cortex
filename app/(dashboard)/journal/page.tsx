@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 
 import { getJournalEntry } from "@/lib/actions/journal"
 import { JournalEditor } from "@/app/components/journal/journal-editor"
+import { isVaultConfigured } from "@/lib/integrations/luma-brain"
 
 function composeJournalLine(hasEntry: boolean, hasContent: boolean): string {
   if (!hasEntry || !hasContent) {
@@ -37,6 +38,7 @@ export default async function JournalPage() {
       <JournalEditor
         initialEntry={entry || undefined}
         initialDate={todayStr}
+        vaultConfigured={isVaultConfigured()}
       />
     </div>
   )

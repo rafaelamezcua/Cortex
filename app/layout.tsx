@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono, Fraunces } from "next/font/google"
 import { ThemeProvider } from "@/app/components/theme-provider"
+import { CommandPalette } from "@/app/components/ui/command-palette"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -54,14 +55,18 @@ export default function RootLayout({
     >
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("luma-theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark")}catch(e){}})()`,
-          }}
-        />
       </head>
       <body className="h-full bg-background text-foreground">
-        <ThemeProvider>{children}</ThemeProvider>
+        {/* Inline flash-prevention: runs before paint, sets data-theme on <html>. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("luma-theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}})()`,
+          }}
+        />
+        <ThemeProvider>
+          {children}
+          <CommandPalette />
+        </ThemeProvider>
       </body>
     </html>
   )
