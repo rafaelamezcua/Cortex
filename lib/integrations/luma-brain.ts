@@ -4,6 +4,40 @@ import path from "path"
 
 const VAULT_PATH = process.env.LUMA_BRAIN_PATH || "C:\\Users\\ramez\\luma-brain"
 
+// GitHub-backed vault (used on remote deploys where the laptop's filesystem
+// isn't reachable). Set both LUMA_BRAIN_REPO ("owner/repo") and
+// LUMA_BRAIN_GITHUB_TOKEN to switch into read-only GitHub mode.
+const GH_REPO = process.env.LUMA_BRAIN_REPO
+const GH_TOKEN = process.env.LUMA_BRAIN_GITHUB_TOKEN
+const GH_BRANCH = process.env.LUMA_BRAIN_BRANCH || "main"
+
+function isGitHubMode(): boolean {
+  return Boolean(GH_REPO && GH_TOKEN)
+}
+
+async function readGitHubFile(relativePath: string): Promise<string> {
+  const encoded = relativePath
+    .split("/")
+    .map((seg) => encodeURIComponent(seg))
+    .join("/")
+  const url = `https://api.github.com/repos/${GH_REPO}/contents/${encoded}?ref=${GH_BRANCH}`
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${GH_TOKEN}`,
+      Accept: "application/vnd.github.raw",
+      "User-Agent": "cortex-luma-brain",
+    },
+    cache: "no-store",
+  })
+  if (!res.ok) throw new Error(`GitHub ${res.status} for ${relativePath}`)
+  return res.text()
+}
+
+const READ_ONLY_RESULT: VaultWriteResult = {
+  ok: false,
+  error: "Vault is read-only on this deployment (GitHub-backed).",
+}
+
 export interface DailyBrief {
   date: string
   exists: boolean
@@ -75,10 +109,11 @@ function parseWins(winsSection: string): string[] {
 
 export async function getDailyBrief(date?: string): Promise<DailyBrief> {
   const today = date || getTodayDate()
-  const filePath = getDailyNotePath(today)
 
   try {
-    const content = await fs.readFile(filePath, "utf-8")
+    const content = isGitHubMode()
+      ? await readGitHubFile(`Daily Notes/${today}.md`)
+      : await fs.readFile(getDailyNotePath(today), "utf-8")
     const tasksSection = parseSection(content, "Tasks Extracted")
     const winsSection = parseSection(content, "Wins")
 
@@ -109,6 +144,7 @@ function getTodayDate(): string {
 }
 
 export async function isVaultAvailable(): Promise<boolean> {
+  if (isGitHubMode()) return true
   try {
     await fs.access(VAULT_PATH)
     return true
@@ -120,6 +156,7 @@ export async function isVaultAvailable(): Promise<boolean> {
 export function isVaultConfigured(): boolean {
   // Trust either an explicit env var OR an accessible fallback path on disk —
   // a personal-app shouldn't require .env setup on every clone.
+  if (isGitHubMode()) return true
   return existsSync(VAULT_PATH)
 }
 
@@ -169,6 +206,7 @@ export async function saveNoteToVault(params: {
   pinned?: boolean
   updatedAt: string
 }): Promise<VaultWriteResult> {
+  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
@@ -208,6 +246,7 @@ export async function saveJournalToVault(params: {
   content: string
   mood: number | null
 }): Promise<VaultWriteResult> {
+  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
@@ -275,6 +314,7 @@ export async function saveTaskToVault(params: {
   dueDate: string | null
   priority: string
 }): Promise<VaultWriteResult> {
+  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
@@ -337,6 +377,7 @@ export async function saveChatToVault(params: {
   messages: { role: "user" | "assistant"; content: string }[]
   startedAt: string
 }): Promise<VaultWriteResult> {
+  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
