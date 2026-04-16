@@ -7,6 +7,17 @@ import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { createGoogleCalendarEvent } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
+import { evaluateTrigger } from "@/lib/actions/rules"
+import { storeEmbedding, deleteEmbedding } from "@/lib/semantic"
+
+function indexTask(
+  id: string,
+  title: string,
+  description: string | null | undefined,
+) {
+  const text = [title, description ?? ""].filter(Boolean).join("\n\n")
+  void Promise.resolve().then(() => storeEmbedding("task", id, text).catch(() => {}))
+}
 
 type Recurrence =
   | "none"
@@ -67,10 +78,12 @@ export async function createTask(formData: FormData) {
   const recurrence = parseRecurrence(formData.get("recurrence"))
   const parentId = (formData.get("parentId") as string) || null
 
+  const newTaskId = nanoid()
+  const newTaskDescription = (formData.get("description") as string) || null
   await db.insert(tasks).values({
-    id: nanoid(),
+    id: newTaskId,
     title: title.trim(),
-    description: (formData.get("description") as string) || null,
+    description: newTaskDescription,
     priority: (formData.get("priority") as "low" | "medium" | "high") ?? "medium",
     dueDate,
     recurrence,
@@ -129,12 +142,15 @@ export async function createTask(formData: FormData) {
 
   revalidatePath("/tasks")
   revalidatePath("/")
+  indexTask(newTaskId, title.trim(), newTaskDescription)
 }
 
 export async function updateTask(id: string, formData: FormData) {
   const now = new Date().toISOString()
   const title = formData.get("title") as string
   if (!title?.trim()) return
+
+  const prev = await db.select().from(tasks).where(eq(tasks.id, id)).get()
 
   const updates: Record<string, unknown> = {
     title: title.trim(),
@@ -160,8 +176,37 @@ export async function updateTask(id: string, formData: FormData) {
     .set(updates)
     .where(eq(tasks.id, id))
 
+  // Fire rules engine when status actually changed.
+  if (
+    prev &&
+    typeof updates.status === "string" &&
+    updates.status !== prev.status
+  ) {
+    const next = await db.select().from(tasks).where(eq(tasks.id, id)).get()
+    if (next) {
+      await evaluateTrigger("task.status_changed", {
+        taskId: id,
+        fromStatus: prev.status,
+        toStatus: next.status,
+        task: {
+          id: next.id,
+          title: next.title,
+          description: next.description,
+          priority: next.priority,
+          status: next.status,
+          dueDate: next.dueDate,
+        },
+      })
+    }
+  }
+
   revalidatePath("/tasks")
   revalidatePath("/")
+  indexTask(
+    id,
+    title.trim(),
+    (updates.description as string | null | undefined) ?? null,
+  )
 }
 
 export async function toggleTask(id: string) {
@@ -231,16 +276,44 @@ export async function toggleTask(id: string) {
     }
   }
 
+  await evaluateTrigger("task.status_changed", {
+    taskId: id,
+    fromStatus: task.status,
+    toStatus: newStatus,
+    task: {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      status: newStatus,
+      dueDate: task.dueDate,
+    },
+  })
+
   revalidatePath("/tasks")
   revalidatePath("/")
 }
 
 export async function deleteTask(id: string) {
+  // Capture subtask ids so we can evict their embeddings too.
+  const subtaskIds = (
+    await db.select().from(tasks).where(eq(tasks.parentId, id)).all()
+  ).map((t) => t.id)
+
   // Delete subtasks first
   await db.delete(tasks).where(eq(tasks.parentId, id))
   await db.delete(tasks).where(eq(tasks.id, id))
   revalidatePath("/tasks")
   revalidatePath("/")
+
+  void Promise.resolve().then(async () => {
+    try {
+      await deleteEmbedding("task", id)
+      for (const sid of subtaskIds) await deleteEmbedding("task", sid)
+    } catch {
+      // Swallow; embedding cleanup isn't critical.
+    }
+  })
 }
 
 export async function getTasks() {

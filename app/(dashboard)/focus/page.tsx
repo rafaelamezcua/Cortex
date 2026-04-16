@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 
 import { FocusTimer } from "@/app/components/focus/focus-timer"
 import { WeeklyStats } from "@/app/components/focus/weekly-stats"
+import { FindFocusTime } from "@/app/components/focus/find-focus-time"
 import { getWeekStats } from "@/lib/actions/focus"
 import { getTasks } from "@/lib/actions/tasks"
 
@@ -32,6 +33,8 @@ export default async function FocusPage() {
       <FocusTimer tasks={taskOptions} />
 
       <WeeklyStats stats={stats} />
+
+      <FindFocusTime tasks={taskOptions} />
     </div>
   )
 }

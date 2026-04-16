@@ -1,7 +1,15 @@
 import { tool } from "ai"
 import { z } from "zod"
 import { db } from "@/lib/db"
-import { tasks, calendarEvents, memories } from "@/lib/schema"
+import {
+  tasks,
+  calendarEvents,
+  memories,
+  habits,
+  habitLogs,
+  journalEntries,
+  pomodoroSessions,
+} from "@/lib/schema"
 import { eq, ne, and, gte, lte } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import {
@@ -18,6 +26,66 @@ import {
   getGrades,
   isCanvasConnected,
 } from "@/lib/integrations/canvas"
+
+// ---------- Stat helpers (shared by queryStats tool) ----------
+
+function statFormatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+function statAddDays(d: Date, n: number): Date {
+  const out = new Date(d)
+  out.setDate(out.getDate() + n)
+  return out
+}
+
+function resolveTimeframe(
+  timeframe: "today" | "this_week" | "last_week" | "this_month" | "last_month"
+): { startDate: string; endDate: string; label: string } {
+  const now = new Date()
+  if (timeframe === "today") {
+    const d = statFormatLocalDate(now)
+    return { startDate: d, endDate: d, label: "today" }
+  }
+  if (timeframe === "this_week") {
+    // Week = last 7 days inclusive of today
+    const start = statAddDays(now, -6)
+    return {
+      startDate: statFormatLocalDate(start),
+      endDate: statFormatLocalDate(now),
+      label: "this week",
+    }
+  }
+  if (timeframe === "last_week") {
+    const end = statAddDays(now, -7)
+    const start = statAddDays(now, -13)
+    return {
+      startDate: statFormatLocalDate(start),
+      endDate: statFormatLocalDate(end),
+      label: "last week",
+    }
+  }
+  if (timeframe === "this_month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    return {
+      startDate: statFormatLocalDate(start),
+      endDate: statFormatLocalDate(now),
+      label: "this month",
+    }
+  }
+  // last_month
+  const firstOfThis = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = statAddDays(firstOfThis, -1)
+  const start = new Date(end.getFullYear(), end.getMonth(), 1)
+  return {
+    startDate: statFormatLocalDate(start),
+    endDate: statFormatLocalDate(end),
+    label: "last month",
+  }
+}
 
 export const aiTools = {
   createTask: tool({
@@ -636,6 +704,164 @@ export const aiTools = {
           savedAt: m.createdAt,
         })),
         count: result.length,
+      }
+    },
+  }),
+
+  // --- Stats tool ---
+
+  queryStats: tool({
+    description:
+      "Look up a single numeric statistic about Rafael's activity over a timeframe. Use this when he asks 'how many', 'when did I', 'how was my week', or wants totals on tasks, focus, habits, journaling, or events.",
+    inputSchema: z.object({
+      timeframe: z
+        .enum(["today", "this_week", "last_week", "this_month", "last_month"])
+        .describe("Window to aggregate over."),
+      dimension: z
+        .enum([
+          "tasks_completed",
+          "focus_minutes",
+          "habit_completion",
+          "journal_entries",
+          "events_attended",
+        ])
+        .describe("Which metric to return."),
+    }),
+    execute: async ({ timeframe, dimension }) => {
+      const { startDate, endDate, label } = resolveTimeframe(timeframe)
+      const rangeStart = `${startDate}T00:00:00`
+      const rangeEnd = `${endDate}T23:59:59.999`
+      const startDateObj = new Date(`${startDate}T00:00:00`)
+      const endDateObj = new Date(`${endDate}T23:59:59.999`)
+
+      let total = 0
+      let breakdown: Record<string, number | string> = {}
+      let note: string | undefined
+
+      if (dimension === "tasks_completed") {
+        const all = await db.select().from(tasks).all()
+        const inWindow = all.filter((t) => {
+          if (t.status !== "done") return false
+          const u = new Date(t.updatedAt)
+          return u >= startDateObj && u <= endDateObj
+        })
+        total = inWindow.length
+        const byPriority: Record<string, number> = {
+          low: 0,
+          medium: 0,
+          high: 0,
+        }
+        for (const t of inWindow) byPriority[t.priority] = (byPriority[t.priority] || 0) + 1
+        breakdown = byPriority
+      } else if (dimension === "focus_minutes") {
+        const pomos = await db
+          .select()
+          .from(pomodoroSessions)
+          .where(
+            and(
+              gte(pomodoroSessions.completedAt, rangeStart),
+              lte(pomodoroSessions.completedAt, rangeEnd)
+            )
+          )
+          .all()
+        const seconds = pomos.reduce((s, p) => s + (p.duration || 0), 0)
+        total = Math.round(seconds / 60)
+        breakdown = { sessions: pomos.length }
+      } else if (dimension === "habit_completion") {
+        const allHabits = await db.select().from(habits).all()
+        if (allHabits.length === 0) {
+          note = "No habits tracked yet."
+          total = 0
+          breakdown = {}
+        } else {
+          const logs = await db
+            .select()
+            .from(habitLogs)
+            .where(
+              and(
+                gte(habitLogs.date, startDate),
+                lte(habitLogs.date, endDate)
+              )
+            )
+            .all()
+          const byHabit = new Map<string, Set<string>>()
+          for (const l of logs) {
+            if (!byHabit.has(l.habitId)) byHabit.set(l.habitId, new Set())
+            byHabit.get(l.habitId)!.add(l.date)
+          }
+          // Days in window
+          const days =
+            Math.round(
+              (endDateObj.getTime() - startDateObj.getTime()) /
+                (1000 * 60 * 60 * 24)
+            ) + 1
+          const perHabit: Record<string, number> = {}
+          let completedDays = 0
+          for (const h of allHabits) {
+            const done = byHabit.get(h.id)?.size ?? 0
+            perHabit[h.name] = done
+            completedDays += done
+          }
+          const possible = allHabits.length * days
+          total = possible > 0 ? Math.round((completedDays / possible) * 100) : 0
+          breakdown = perHabit
+          note = `${completedDays} of ${possible} possible habit-days over ${days} day${days === 1 ? "" : "s"}.`
+        }
+      } else if (dimension === "journal_entries") {
+        const entries = await db
+          .select()
+          .from(journalEntries)
+          .where(
+            and(
+              gte(journalEntries.date, startDate),
+              lte(journalEntries.date, endDate)
+            )
+          )
+          .all()
+        const written = entries.filter(
+          (e) => e.content && e.content.trim().length > 0
+        )
+        total = written.length
+        breakdown = { withContent: written.length, drafts: entries.length - written.length }
+      } else if (dimension === "events_attended") {
+        const now = new Date()
+        const localEvents = await db
+          .select()
+          .from(calendarEvents)
+          .where(
+            and(
+              lte(calendarEvents.startTime, rangeEnd),
+              gte(calendarEvents.endTime, rangeStart)
+            )
+          )
+          .all()
+        const localAttended = localEvents.filter(
+          (e) => new Date(e.endTime) <= now && !e.allDay
+        )
+        let googleAttended = 0
+        if (await isGoogleConnected()) {
+          try {
+            const googleEvents = await getGoogleCalendarEvents(
+              new Date(rangeStart).toISOString(),
+              new Date(rangeEnd).toISOString()
+            )
+            googleAttended = googleEvents.filter(
+              (e) => new Date(e.endTime) <= now && !e.allDay
+            ).length
+          } catch {
+            note = "Google Calendar unavailable; local events only."
+          }
+        }
+        total = localAttended.length + googleAttended
+        breakdown = { local: localAttended.length, google: googleAttended }
+      }
+
+      return {
+        timeframe: label,
+        dimension,
+        total,
+        breakdown,
+        ...(note ? { note } : {}),
       }
     },
   }),

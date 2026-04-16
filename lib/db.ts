@@ -179,4 +179,35 @@ try {
   sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN parent_id TEXT`)
 } catch { /* column already exists */ }
 
+// Automation + semantic search tables
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS rules (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    trigger_type TEXT NOT NULL,
+    trigger_config TEXT,
+    action_type TEXT NOT NULL,
+    action_config TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS rule_runs (
+    id TEXT PRIMARY KEY,
+    rule_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    details TEXT,
+    ran_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS embeddings (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    ref_id TEXT NOT NULL,
+    embedding BLOB NOT NULL,
+    model TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_embeddings_kind_ref ON embeddings (kind, ref_id);
+`)
+
 export const db = drizzle(sqlite, { schema })

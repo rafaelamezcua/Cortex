@@ -4,6 +4,7 @@ import { useState } from "react"
 import { TaskList } from "./task-list"
 import { KanbanView } from "./kanban-view"
 import { TimelineView } from "./timeline-view"
+import { QuickAdd } from "./quick-add"
 import { List, Columns3, GitBranch } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -35,6 +36,9 @@ export function TasksView({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="space-y-4">
+      {/* Natural-language quick add */}
+      <QuickAdd />
+
       {/* View switcher */}
       <div className="flex items-center justify-between">
         <div className="flex rounded-[--radius-md] border border-border-light bg-background-secondary p-0.5">

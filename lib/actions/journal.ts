@@ -5,6 +5,13 @@ import { journalEntries } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
+import { storeEmbedding } from "@/lib/semantic"
+
+function indexJournal(id: string, content: string | null | undefined) {
+  void Promise.resolve().then(() =>
+    storeEmbedding("journal", id, content ?? "").catch(() => {}),
+  )
+}
 
 export async function saveJournalEntry(date: string, content: string, mood?: number) {
   const existing = await db
@@ -15,7 +22,9 @@ export async function saveJournalEntry(date: string, content: string, mood?: num
 
   const now = new Date().toISOString()
 
+  let id: string
   if (existing) {
+    id = existing.id
     await db
       .update(journalEntries)
       .set({
@@ -25,8 +34,9 @@ export async function saveJournalEntry(date: string, content: string, mood?: num
       })
       .where(eq(journalEntries.id, existing.id))
   } else {
+    id = nanoid()
     await db.insert(journalEntries).values({
-      id: nanoid(),
+      id,
       date,
       content,
       mood: mood ?? null,
@@ -37,6 +47,7 @@ export async function saveJournalEntry(date: string, content: string, mood?: num
 
   revalidatePath("/journal")
   revalidatePath("/")
+  indexJournal(id, content)
 }
 
 export async function getJournalEntry(date: string) {

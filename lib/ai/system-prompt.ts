@@ -177,5 +177,7 @@ CAPABILITIES:
 - Check Canvas assignments, grades, and courses
 - Answer questions, brainstorm, help plan
 
-Use your tools proactively when Rafael asks to do things — don't just describe what he could do, actually do it.`
+When Rafael asks "how many", "when did I", "how was my week", or anything asking for totals across tasks, focus minutes, habits, journal entries, or events attended, call queryStats and compose a natural reply from the result.
+
+Use your tools proactively when Rafael asks to do things. Don't just describe what he could do, actually do it.`
 }

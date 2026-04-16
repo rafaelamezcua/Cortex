@@ -9,6 +9,8 @@ import { BrainWidget } from "@/app/components/dashboard/brain-widget"
 import { CanvasWidget } from "@/app/components/dashboard/canvas-widget"
 import { HabitsWidget } from "@/app/components/dashboard/habits-widget"
 import { LumaStrip } from "@/app/components/dashboard/luma-strip"
+import { ReschedulePanel } from "@/app/components/dashboard/reschedule-panel"
+import { proposeReschedule } from "@/lib/actions/reviews"
 import { isCanvasConnected } from "@/lib/integrations/canvas"
 import { getHabits, getHabitLogs } from "@/lib/actions/habits"
 import { getTasks } from "@/lib/actions/tasks"
@@ -141,6 +143,10 @@ export default async function DashboardPage() {
     }
   }
 
+  const isSunday = now.getDay() === 0
+  const rescheduleProposals = isSunday ? await proposeReschedule() : []
+  const showReschedule = isSunday && rescheduleProposals.length > 0
+
   const activeTasks = tasks.filter((t) => t.status !== "done")
   const completedToday = tasks.filter(
     (t) =>
@@ -184,6 +190,9 @@ export default async function DashboardPage() {
 
       {/* Proactive nudges */}
       <LumaStrip />
+
+      {/* Sunday smart reschedule for overdue tasks */}
+      {showReschedule && <ReschedulePanel proposals={rescheduleProposals} />}
 
       {/* Today hero */}
       <DailyBriefing events={todaysEvents} tasks={tasks} />

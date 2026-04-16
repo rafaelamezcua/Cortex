@@ -716,3 +716,115 @@ export async function saveWeeklyDigestToVault(params: {
   }
   return { ok: false, error: result.error }
 }
+
+// ============================================================
+// Smart reschedule — propose and apply new due dates for overdue tasks
+// ============================================================
+
+export type RescheduleProposal = {
+  taskId: string
+  title: string
+  priority: "low" | "medium" | "high"
+  oldDue: string
+  newDue: string
+}
+
+// Spread overdue tasks across the next N weekdays starting from today.
+// High priority: within 2 weekdays. Medium: within 5. Low: within 7.
+function nextWeekdays(from: Date, count: number): string[] {
+  const out: string[] = []
+  const cursor = new Date(from)
+  while (out.length < count) {
+    const day = cursor.getDay()
+    if (day !== 0 && day !== 6) {
+      out.push(formatLocalDate(cursor))
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return out
+}
+
+export async function proposeReschedule(): Promise<RescheduleProposal[]> {
+  const now = new Date()
+  const todayStr = formatLocalDate(now)
+
+  const active = await db
+    .select()
+    .from(tasks)
+    .where(ne(tasks.status, "done"))
+    .all()
+
+  const overdue = active
+    .filter((t) => t.dueDate && t.dueDate < todayStr)
+    .filter((t) => !t.parentId) // skip subtasks — they follow parent
+    .sort((a, b) => {
+      // Priority first (high, medium, low), then oldest overdue first
+      const rank: Record<string, number> = { high: 0, medium: 1, low: 2 }
+      const pa = rank[a.priority] ?? 1
+      const pb = rank[b.priority] ?? 1
+      if (pa !== pb) return pa - pb
+      return (a.dueDate || "").localeCompare(b.dueDate || "")
+    })
+
+  if (overdue.length === 0) return []
+
+  // Precompute weekday slots for each priority window
+  const slotsHigh = nextWeekdays(now, 2)
+  const slotsMed = nextWeekdays(now, 5)
+  const slotsLow = nextWeekdays(now, 7)
+
+  // Track how many tasks we've placed per date to balance distribution
+  const loadByDate = new Map<string, number>()
+  function pick(slots: string[]): string {
+    let best = slots[0]
+    let bestLoad = loadByDate.get(best) ?? 0
+    for (const s of slots) {
+      const load = loadByDate.get(s) ?? 0
+      if (load < bestLoad) {
+        best = s
+        bestLoad = load
+      }
+    }
+    loadByDate.set(best, bestLoad + 1)
+    return best
+  }
+
+  const proposals: RescheduleProposal[] = overdue.map((t) => {
+    const slots =
+      t.priority === "high"
+        ? slotsHigh
+        : t.priority === "low"
+          ? slotsLow
+          : slotsMed
+    const newDue = pick(slots)
+    return {
+      taskId: t.id,
+      title: t.title,
+      priority: t.priority as "low" | "medium" | "high",
+      oldDue: t.dueDate as string,
+      newDue,
+    }
+  })
+
+  return proposals
+}
+
+export async function applyReschedule(
+  proposals: { taskId: string; newDue: string }[]
+): Promise<{ updated: number }> {
+  if (!proposals.length) return { updated: 0 }
+  const now = new Date().toISOString()
+  let updated = 0
+  for (const p of proposals) {
+    if (!p.taskId || !p.newDue) continue
+    await db
+      .update(tasks)
+      .set({ dueDate: p.newDue, updatedAt: now })
+      .where(eq(tasks.id, p.taskId))
+    updated++
+  }
+  const { revalidatePath } = await import("next/cache")
+  revalidatePath("/tasks")
+  revalidatePath("/")
+  return { updated }
+}

@@ -15,6 +15,7 @@ import {
   FolderKanban,
   Timer,
   Brain,
+  Network,
 } from "lucide-react"
 import { LumaLogo } from "@/app/components/ui/luma-logo"
 import { ThemeToggle } from "@/app/components/ui/theme-toggle"
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/focus", label: "Focus", icon: Timer },
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/memories", label: "Memories", icon: Brain },
+  { href: "/graph", label: "Graph", icon: Network },
 ]
 
 export function Sidebar() {

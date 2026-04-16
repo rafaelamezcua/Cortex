@@ -6,6 +6,13 @@ import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import type { MemoryCategory } from "@/lib/memories-types"
+import { storeEmbedding, deleteEmbedding } from "@/lib/semantic"
+
+function indexMemory(id: string, content: string) {
+  void Promise.resolve().then(() =>
+    storeEmbedding("memory", id, content).catch(() => {}),
+  )
+}
 
 export async function getMemories() {
   return db.select().from(memories).orderBy(memories.updatedAt).all()
@@ -19,8 +26,9 @@ export async function createMemory(
   if (!trimmed) return
 
   const now = new Date().toISOString()
+  const id = nanoid()
   await db.insert(memories).values({
-    id: nanoid(),
+    id,
     category,
     content: trimmed,
     createdAt: now,
@@ -28,6 +36,7 @@ export async function createMemory(
   })
 
   revalidatePath("/memories")
+  indexMemory(id, trimmed)
 }
 
 export async function updateMemory(id: string, content: string) {
@@ -40,9 +49,13 @@ export async function updateMemory(id: string, content: string) {
     .where(eq(memories.id, id))
 
   revalidatePath("/memories")
+  indexMemory(id, trimmed)
 }
 
 export async function deleteMemory(id: string) {
   await db.delete(memories).where(eq(memories.id, id))
   revalidatePath("/memories")
+  void Promise.resolve().then(() =>
+    deleteEmbedding("memory", id).catch(() => {}),
+  )
 }

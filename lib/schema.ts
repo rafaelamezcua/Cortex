@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core"
 
 export const tasks = sqliteTable("tasks", {
   id: text("id").primaryKey(),
@@ -145,6 +145,35 @@ export const memories = sqliteTable("memories", {
   }).notNull(),
   content: text("content").notNull(),
   createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const rules = sqliteTable("rules", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  triggerType: text("trigger_type").notNull(),
+  triggerConfig: text("trigger_config"),
+  actionType: text("action_type").notNull(),
+  actionConfig: text("action_config"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const ruleRuns = sqliteTable("rule_runs", {
+  id: text("id").primaryKey(),
+  ruleId: text("rule_id").notNull(),
+  status: text("status", { enum: ["success", "error", "skipped"] }).notNull(),
+  details: text("details"),
+  ranAt: text("ran_at").notNull(),
+})
+
+export const embeddings = sqliteTable("embeddings", {
+  id: text("id").primaryKey(),
+  kind: text("kind").notNull(),
+  refId: text("ref_id").notNull(),
+  embedding: blob("embedding").notNull(),
+  model: text("model").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
 

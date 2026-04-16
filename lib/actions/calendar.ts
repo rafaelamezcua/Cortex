@@ -11,6 +11,21 @@ import {
   deleteGoogleCalendarEvent,
 } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
+import { storeEmbedding, deleteEmbedding } from "@/lib/semantic"
+
+function indexEvent(
+  id: string,
+  title: string,
+  description: string | null | undefined,
+  notes: string | null | undefined,
+) {
+  const text = [title, description ?? "", notes ?? ""]
+    .filter(Boolean)
+    .join("\n\n")
+  void Promise.resolve().then(() =>
+    storeEmbedding("event", id, text).catch(() => {}),
+  )
+}
 
 export async function createEvent(formData: FormData) {
   const now = new Date().toISOString()
@@ -57,9 +72,12 @@ export async function createEvent(formData: FormData) {
     recurrence
   )
 
+  const createdIds: string[] = []
   for (const instance of instances) {
+    const instanceId = nanoid()
+    createdIds.push(instanceId)
     await db.insert(calendarEvents).values({
-      id: nanoid(),
+      id: instanceId,
       title: title.trim(),
       description,
       notes,
@@ -78,6 +96,7 @@ export async function createEvent(formData: FormData) {
 
   revalidatePath("/calendar")
   revalidatePath("/")
+  for (const cid of createdIds) indexEvent(cid, title.trim(), description, notes)
 }
 
 function generateRecurrenceInstances(
@@ -185,6 +204,12 @@ export async function updateEvent(id: string, formData: FormData) {
 
   revalidatePath("/calendar")
   revalidatePath("/")
+  indexEvent(
+    id,
+    title.trim(),
+    (formData.get("description") as string) || null,
+    notes,
+  )
 }
 
 export async function deleteEvent(id: string) {
@@ -204,6 +229,9 @@ export async function deleteEvent(id: string) {
   await db.delete(calendarEvents).where(eq(calendarEvents.id, id))
   revalidatePath("/calendar")
   revalidatePath("/")
+  void Promise.resolve().then(() =>
+    deleteEmbedding("event", id).catch(() => {}),
+  )
 }
 
 export async function getEventsForRange(start: string, end: string) {
