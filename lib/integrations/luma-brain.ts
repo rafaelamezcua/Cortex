@@ -6,7 +6,8 @@ const VAULT_PATH = process.env.LUMA_BRAIN_PATH || "C:\\Users\\ramez\\luma-brain"
 
 // GitHub-backed vault (used on remote deploys where the laptop's filesystem
 // isn't reachable). Set both LUMA_BRAIN_REPO ("owner/repo") and
-// LUMA_BRAIN_GITHUB_TOKEN to switch into read-only GitHub mode.
+// LUMA_BRAIN_GITHUB_TOKEN to switch into GitHub mode. Token needs
+// Contents: Read & Write to commit edits back to the vault.
 const GH_REPO = process.env.LUMA_BRAIN_REPO
 const GH_TOKEN = process.env.LUMA_BRAIN_GITHUB_TOKEN
 const GH_BRANCH = process.env.LUMA_BRAIN_BRANCH || "main"
@@ -15,27 +16,81 @@ function isGitHubMode(): boolean {
   return Boolean(GH_REPO && GH_TOKEN)
 }
 
-async function readGitHubFile(relativePath: string): Promise<string> {
+function ghContentsUrl(relativePath: string): string {
   const encoded = relativePath
     .split("/")
     .map((seg) => encodeURIComponent(seg))
     .join("/")
-  const url = `https://api.github.com/repos/${GH_REPO}/contents/${encoded}?ref=${GH_BRANCH}`
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${GH_TOKEN}`,
-      Accept: "application/vnd.github.raw",
-      "User-Agent": "cortex-luma-brain",
-    },
-    cache: "no-store",
-  })
-  if (!res.ok) throw new Error(`GitHub ${res.status} for ${relativePath}`)
-  return res.text()
+  return `https://api.github.com/repos/${GH_REPO}/contents/${encoded}`
 }
 
-const READ_ONLY_RESULT: VaultWriteResult = {
-  ok: false,
-  error: "Vault is read-only on this deployment (GitHub-backed).",
+interface VaultFile {
+  content: string
+  // GitHub blob SHA. Required when updating an existing file via the
+  // contents API; null on the filesystem backend.
+  sha: string | null
+}
+
+/** Returns the file's content + sha, or null if missing. */
+async function readVaultFile(relativePath: string): Promise<VaultFile | null> {
+  if (isGitHubMode()) {
+    const url = `${ghContentsUrl(relativePath)}?ref=${GH_BRANCH}`
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${GH_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "cortex-luma-brain",
+      },
+      cache: "no-store",
+    })
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error(`GitHub ${res.status} for ${relativePath}`)
+    const json = (await res.json()) as { content: string; sha: string; encoding: string }
+    const content = Buffer.from(json.content, "base64").toString("utf-8")
+    return { content, sha: json.sha }
+  }
+  try {
+    const fullPath = path.join(VAULT_PATH, relativePath)
+    const content = await fs.readFile(fullPath, "utf-8")
+    return { content, sha: null }
+  } catch {
+    return null
+  }
+}
+
+/** Create or overwrite a file. `sha` must be supplied when updating an existing GitHub file. */
+async function writeVaultFile(
+  relativePath: string,
+  content: string,
+  sha: string | null
+): Promise<void> {
+  if (isGitHubMode()) {
+    const action = sha ? "Update" : "Add"
+    const body = {
+      message: `${action} ${relativePath} (via Cortex)`,
+      content: Buffer.from(content, "utf-8").toString("base64"),
+      branch: GH_BRANCH,
+      ...(sha ? { sha } : {}),
+    }
+    const res = await fetch(ghContentsUrl(relativePath), {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${GH_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "cortex-luma-brain",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "")
+      throw new Error(`GitHub PUT ${res.status} for ${relativePath}: ${detail.slice(0, 200)}`)
+    }
+    return
+  }
+  const fullPath = path.join(VAULT_PATH, relativePath)
+  await ensureDir(path.dirname(fullPath))
+  await fs.writeFile(fullPath, content, "utf-8")
 }
 
 export interface DailyBrief {
@@ -111,18 +166,19 @@ export async function getDailyBrief(date?: string): Promise<DailyBrief> {
   const today = date || getTodayDate()
 
   try {
-    const content = isGitHubMode()
-      ? await readGitHubFile(`Daily Notes/${today}.md`)
-      : await fs.readFile(getDailyNotePath(today), "utf-8")
-    const tasksSection = parseSection(content, "Tasks Extracted")
-    const winsSection = parseSection(content, "Wins")
+    const file = await readVaultFile(`Daily Notes/${today}.md`)
+    if (!file) {
+      return { date: today, exists: false, tasks: [], wins: [], raw: null }
+    }
+    const tasksSection = parseSection(file.content, "Tasks Extracted")
+    const winsSection = parseSection(file.content, "Wins")
 
     return {
       date: today,
       exists: true,
       tasks: parseTasks(tasksSection),
       wins: parseWins(winsSection),
-      raw: content,
+      raw: file.content,
     }
   } catch {
     return {
@@ -206,18 +262,14 @@ export async function saveNoteToVault(params: {
   pinned?: boolean
   updatedAt: string
 }): Promise<VaultWriteResult> {
-  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
 
-  const notesDir = path.join(VAULT_PATH, "Resources", "Luma Notes")
-  await ensureDir(notesDir)
-
   const safeName = sanitizeFilename(params.title) || "untitled"
   const date = params.updatedAt.split("T")[0]
   const filename = `${date}-${safeName}.md`
-  const filePath = path.join(notesDir, filename)
+  const relativePath = `Resources/Luma Notes/${filename}`
 
   const frontmatter = formatFrontmatter({
     source: "luma",
@@ -230,11 +282,12 @@ export async function saveNoteToVault(params: {
   const body = `${frontmatter}\n\n# ${params.title}\n\n${params.content}\n`
 
   try {
-    await fs.writeFile(filePath, body, "utf-8")
+    const existing = await readVaultFile(relativePath)
+    await writeVaultFile(relativePath, body, existing?.sha ?? null)
     return {
       ok: true,
-      path: filePath,
-      relativePath: `Resources/Luma Notes/${filename}`,
+      path: isGitHubMode() ? relativePath : path.join(VAULT_PATH, relativePath),
+      relativePath,
     }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -246,14 +299,11 @@ export async function saveJournalToVault(params: {
   content: string
   mood: number | null
 }): Promise<VaultWriteResult> {
-  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
 
-  const dailyDir = path.join(VAULT_PATH, "Daily Notes")
-  await ensureDir(dailyDir)
-  const dailyPath = path.join(dailyDir, `${params.date}.md`)
+  const relativePath = `Daily Notes/${params.date}.md`
 
   const moodLabels = ["Rough", "Meh", "Okay", "Good", "Great"]
   const moodLabel =
@@ -271,11 +321,11 @@ export async function saveJournalToVault(params: {
     .join("\n")
 
   try {
-    let existing = ""
-    try {
-      existing = await fs.readFile(dailyPath, "utf-8")
-    } catch {
-      // File doesn't exist — create with frontmatter
+    const existingFile = await readVaultFile(relativePath)
+    let existing: string
+    if (existingFile) {
+      existing = existingFile.content
+    } else {
       const frontmatter = formatFrontmatter({
         date: params.date,
         tags: ["daily"],
@@ -292,11 +342,11 @@ export async function saveJournalToVault(params: {
       updated = `${existing.trimEnd()}\n\n${journalSection}\n`
     }
 
-    await fs.writeFile(dailyPath, updated, "utf-8")
+    await writeVaultFile(relativePath, updated, existingFile?.sha ?? null)
     return {
       ok: true,
-      path: dailyPath,
-      relativePath: `Daily Notes/${params.date}.md`,
+      path: isGitHubMode() ? relativePath : path.join(VAULT_PATH, relativePath),
+      relativePath,
     }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -314,15 +364,12 @@ export async function saveTaskToVault(params: {
   dueDate: string | null
   priority: string
 }): Promise<VaultWriteResult> {
-  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
 
   const today = getTodayDate()
-  const dailyDir = path.join(VAULT_PATH, "Daily Notes")
-  await ensureDir(dailyDir)
-  const dailyPath = path.join(dailyDir, `${today}.md`)
+  const relativePath = `Daily Notes/${today}.md`
 
   const checkbox = params.done ? "[x]" : "[ ]"
   const dueLabel = params.dueDate ? `**${params.dueDate}** ` : ""
@@ -331,10 +378,11 @@ export async function saveTaskToVault(params: {
   const taskLine = `- ${checkbox} ${dueLabel}${params.title}${priorityTag} ${marker}`
 
   try {
-    let existing = ""
-    try {
-      existing = await fs.readFile(dailyPath, "utf-8")
-    } catch {
+    const existingFile = await readVaultFile(relativePath)
+    let existing: string
+    if (existingFile) {
+      existing = existingFile.content
+    } else {
       const frontmatter = formatFrontmatter({
         date: today,
         tags: ["daily"],
@@ -361,11 +409,11 @@ export async function saveTaskToVault(params: {
       }
     }
 
-    await fs.writeFile(dailyPath, existing, "utf-8")
+    await writeVaultFile(relativePath, existing, existingFile?.sha ?? null)
     return {
       ok: true,
-      path: dailyPath,
-      relativePath: `Daily Notes/${today}.md`,
+      path: isGitHubMode() ? relativePath : path.join(VAULT_PATH, relativePath),
+      relativePath,
     }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -377,18 +425,14 @@ export async function saveChatToVault(params: {
   messages: { role: "user" | "assistant"; content: string }[]
   startedAt: string
 }): Promise<VaultWriteResult> {
-  if (isGitHubMode()) return READ_ONLY_RESULT
   if (!(await isVaultAvailable())) {
     return { ok: false, error: "Vault not available" }
   }
 
-  const chatsDir = path.join(VAULT_PATH, "Resources", "Luma Chats")
-  await ensureDir(chatsDir)
-
   const safeName = sanitizeFilename(params.title) || "conversation"
   const date = params.startedAt.split("T")[0]
   const filename = `${date}-${safeName}.md`
-  const filePath = path.join(chatsDir, filename)
+  const relativePath = `Resources/Luma Chats/${filename}`
 
   const frontmatter = formatFrontmatter({
     source: "luma-chat",
@@ -407,11 +451,12 @@ export async function saveChatToVault(params: {
   const body = `${frontmatter}\n\n# ${params.title}\n\n${transcript}\n`
 
   try {
-    await fs.writeFile(filePath, body, "utf-8")
+    const existing = await readVaultFile(relativePath)
+    await writeVaultFile(relativePath, body, existing?.sha ?? null)
     return {
       ok: true,
-      path: filePath,
-      relativePath: `Resources/Luma Chats/${filename}`,
+      path: isGitHubMode() ? relativePath : path.join(VAULT_PATH, relativePath),
+      relativePath,
     }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
