@@ -78,12 +78,13 @@ export async function addProjectTask(
 
   // Create calendar event if date + calendar both set
   if (dueDate && calendarId) {
-    const isLocal = calendarId === "local" || calendarId.startsWith("local-")
+    const isLocalCal = calendarId.startsWith("local-")
+    const isGenericLocal = calendarId === "local"
     const startTime = `${dueDate}T09:00`
     const endTime = `${dueDate}T10:00`
     let googleEventId: string | null = null
 
-    if (!isLocal) {
+    if (!isLocalCal && !isGenericLocal) {
       const connected = await isGoogleConnected()
       if (connected) {
         try {
@@ -110,7 +111,8 @@ export async function addProjectTask(
       allDay: false,
       color: "#7986cb",
       googleEventId,
-      googleCalendarId: !isLocal ? calendarId : null,
+      googleCalendarId: !isLocalCal && !isGenericLocal ? calendarId : null,
+      localCalendarId: isLocalCal ? calendarId : null,
       recurrence: null,
       createdAt: now,
       updatedAt: now,
@@ -153,11 +155,11 @@ export async function updateProjectTask(
     const endTime = `${data.dueDate}T10:00`
 
     // "local" or "local-*" are app-local calendars. Anything else is Google.
-    const isLocal =
-      data.calendarId === "local" || data.calendarId.startsWith("local-")
+    const isLocalCal = data.calendarId.startsWith("local-")
+    const isGenericLocal = data.calendarId === "local"
     let googleEventId: string | null = null
 
-    if (!isLocal) {
+    if (!isLocalCal && !isGenericLocal) {
       const connected = await isGoogleConnected()
       if (connected) {
         try {
@@ -185,7 +187,8 @@ export async function updateProjectTask(
       allDay: false,
       color: "#7986cb",
       googleEventId,
-      googleCalendarId: !isLocal ? data.calendarId : null,
+      googleCalendarId: !isLocalCal && !isGenericLocal ? data.calendarId : null,
+      localCalendarId: isLocalCal ? data.calendarId : null,
       recurrence: null,
       createdAt: now,
       updatedAt: now,

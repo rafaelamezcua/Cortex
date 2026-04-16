@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     allDay: e.allDay,
     color: e.color,
     source: e.googleCalendarId ? "google" : "local",
-    calendarId: e.googleCalendarId || "local",
+    calendarId: e.localCalendarId || e.googleCalendarId || "local",
   }))
 
   const connected = await isGoogleConnected()

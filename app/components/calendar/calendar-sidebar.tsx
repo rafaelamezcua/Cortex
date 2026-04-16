@@ -18,6 +18,8 @@ interface CalendarSidebarProps {
   calendars: CalendarInfo[]
   enabledCalendars: Set<string>
   onToggleCalendar: (id: string) => void
+  onRefreshCalendars: () => void
+  onRefreshEvents: () => void
   year: number
   month: number
   selectedDate: string | null
@@ -29,6 +31,8 @@ export function CalendarSidebar({
   calendars,
   enabledCalendars,
   onToggleCalendar,
+  onRefreshCalendars,
+  onRefreshEvents,
   year,
   month,
   selectedDate,
@@ -212,29 +216,43 @@ export function CalendarSidebar({
                     <Download className="h-3 w-3" />
                   </a>
                   {isLocalCal && (
-                    <DeleteCalButton calId={cal.id.replace("local-", "")} />
+                    <DeleteCalButton
+                      calId={cal.id.replace("local-", "")}
+                      onDeleted={() => {
+                        onRefreshCalendars()
+                        onRefreshEvents()
+                      }}
+                    />
                   )}
                 </div>
               </div>
             )
           })}
           {/* Create new calendar */}
-          <CreateCalendarButton onCreated={(id) => onToggleCalendar(id)} />
+          <CreateCalendarButton
+            onCreated={(id) => {
+              onToggleCalendar(id)
+              onRefreshCalendars()
+            }}
+          />
         </div>
       </div>
     </div>
   )
 }
 
-function DeleteCalButton({ calId }: { calId: string }) {
+function DeleteCalButton({ calId, onDeleted }: { calId: string; onDeleted: () => void }) {
   const [isPending, startTransition] = useTransition()
   return (
     <button
       disabled={isPending}
       onClick={(e) => {
         e.stopPropagation()
-        if (confirm("Delete this calendar?")) {
-          startTransition(() => deleteLocalCalendar(calId))
+        if (confirm("Delete this calendar? Events on it will also be removed.")) {
+          startTransition(async () => {
+            await deleteLocalCalendar(calId)
+            onDeleted()
+          })
         }
       }}
       className="rounded p-1 text-foreground-quaternary hover:text-danger transition-colors disabled:opacity-50"

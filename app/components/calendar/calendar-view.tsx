@@ -96,32 +96,31 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     return new Set(["local"])
   })
 
-  // Fetch Google Calendar list — only add NEW calendars, respect saved preferences
-  useEffect(() => {
-    if (!mounted) return
+  // Fetch calendar list — only add NEW calendars, respect saved preferences
+  const refreshCalendars = useCallback(() => {
     fetch("/api/calendars")
       .then((r) => r.json())
       .then((data) => {
-        if (data.calendars?.length) {
-          setCalendars(data.calendars)
+        const list: CalendarInfo[] = data.calendars ?? []
+        setCalendars(list)
 
-          // Check if user has saved preferences before
-          const hasSavedPrefs = localStorage.getItem("luma-cal-enabled")
-
-          if (!hasSavedPrefs) {
-            // First time — enable all calendars
-            setEnabledCalendars((prev) => {
-              const next = new Set(prev)
-              data.calendars.forEach((c: CalendarInfo) => next.add(c.id))
-              localStorage.setItem("luma-cal-enabled", JSON.stringify([...next]))
-              return next
-            })
-          }
-          // Otherwise: keep whatever the user had saved — don't touch enabledCalendars
+        const hasSavedPrefs = localStorage.getItem("luma-cal-enabled")
+        if (!hasSavedPrefs) {
+          setEnabledCalendars((prev) => {
+            const next = new Set(prev)
+            list.forEach((c) => next.add(c.id))
+            localStorage.setItem("luma-cal-enabled", JSON.stringify([...next]))
+            return next
+          })
         }
       })
       .catch(() => {})
-  }, [mounted])
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    refreshCalendars()
+  }, [mounted, refreshCalendars])
 
   // Fetch events — gated on `mounted` to prevent stale fetches with the
   // dummy pre-mount year/month values (which would race with the real fetch
@@ -305,6 +304,8 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
           calendars={calendars}
           enabledCalendars={enabledCalendars}
           onToggleCalendar={toggleCalendar}
+          onRefreshCalendars={refreshCalendars}
+          onRefreshEvents={fetchEvents}
           year={year}
           month={month}
           selectedDate={selectedDate}

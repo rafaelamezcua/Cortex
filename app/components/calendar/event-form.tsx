@@ -132,7 +132,9 @@ export function EventForm({ event, defaultDate, onClose }: EventFormProps) {
         <form
           action={(formData) => {
             formData.set("notes", notes)
-            if (selectedCalendar !== "local") {
+            if (selectedCalendar.startsWith("local-")) {
+              formData.set("localCalendarId", selectedCalendar)
+            } else if (selectedCalendar !== "local") {
               formData.set("googleCalendarId", selectedCalendar)
             }
             startTransition(async () => {

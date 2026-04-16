@@ -158,6 +158,9 @@ try {
   sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN recurrence TEXT`)
 } catch { /* column already exists */ }
 try {
+  sqlite.exec(`ALTER TABLE calendar_events ADD COLUMN local_calendar_id TEXT`)
+} catch { /* column already exists */ }
+try {
   sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN due_date TEXT`)
 } catch { /* column already exists */ }
 try {

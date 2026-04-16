@@ -33,8 +33,11 @@ export async function createTask(formData: FormData) {
     const endTime = `${dueDate}T10:00`
     let googleEventId: string | null = null
     let googleCalendarId: string | null = null
+    let localCalendarId: string | null = null
 
-    if (calendarId && calendarId !== "local") {
+    if (calendarId?.startsWith("local-")) {
+      localCalendarId = calendarId
+    } else if (calendarId && calendarId !== "local") {
       const connected = await isGoogleConnected()
       if (connected) {
         try {
@@ -64,6 +67,7 @@ export async function createTask(formData: FormData) {
       color: "#7986cb",
       googleEventId,
       googleCalendarId,
+      localCalendarId,
       createdAt: now,
       updatedAt: now,
     })

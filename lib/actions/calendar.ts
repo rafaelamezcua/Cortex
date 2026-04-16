@@ -24,6 +24,7 @@ export async function createEvent(formData: FormData) {
   const description = (formData.get("description") as string) || null
   const notes = (formData.get("notes") as string) || null
   const googleCalendarId = (formData.get("googleCalendarId") as string) || null
+  const localCalendarId = (formData.get("localCalendarId") as string) || null
 
   let googleEventId: string | null = null
 
@@ -68,6 +69,7 @@ export async function createEvent(formData: FormData) {
       color,
       googleEventId,
       googleCalendarId,
+      localCalendarId,
       recurrence: recurrence !== "none" ? recurrence : null,
       createdAt: now,
       updatedAt: now,
