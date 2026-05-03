@@ -178,6 +178,12 @@ try {
 try {
   sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN parent_id TEXT`)
 } catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE tasks ADD COLUMN archived_at TEXT`)
+} catch { /* column already exists */ }
+try {
+  sqlite.exec(`ALTER TABLE project_tasks ADD COLUMN archived_at TEXT`)
+} catch { /* column already exists */ }
 
 // Automation + semantic search tables
 sqlite.exec(`

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
 import { tasks, notes, calendarEvents, memories } from "@/lib/schema"
-import { ne, and, gte, lte } from "drizzle-orm"
+import { ne, and, gte, lte, isNull } from "drizzle-orm"
 import { getGoogleCalendarEvents } from "@/lib/integrations/google-calendar"
 import { isGoogleConnected } from "@/lib/integrations/google-auth"
 import { getUpcomingAssignments, isCanvasConnected } from "@/lib/integrations/canvas"
@@ -18,7 +18,7 @@ export async function getSystemPrompt(userQuery?: string): Promise<string> {
   const activeTasks = await db
     .select()
     .from(tasks)
-    .where(ne(tasks.status, "done"))
+    .where(and(ne(tasks.status, "done"), isNull(tasks.archivedAt)))
     .all()
 
   const recentNotes = await db.select().from(notes).all()

@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db"
 import { projects, projectTasks, calendarEvents } from "@/lib/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, and, isNull, isNotNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { createGoogleCalendarEvent } from "@/lib/integrations/google-calendar"
@@ -206,10 +206,68 @@ export async function deleteProjectTask(id: string) {
 }
 
 export async function getProjectTasks(projectId: string) {
+  // Active (non-archived) project tasks for board views.
   return db
     .select()
     .from(projectTasks)
-    .where(eq(projectTasks.projectId, projectId))
+    .where(
+      and(eq(projectTasks.projectId, projectId), isNull(projectTasks.archivedAt)),
+    )
     .orderBy(projectTasks.order)
     .all()
+}
+
+export async function getArchivedProjectTasks(projectId: string) {
+  return db
+    .select()
+    .from(projectTasks)
+    .where(
+      and(eq(projectTasks.projectId, projectId), isNotNull(projectTasks.archivedAt)),
+    )
+    .orderBy(desc(projectTasks.archivedAt))
+    .all()
+}
+
+// ---------- Project task archive ops ----------
+
+export async function archiveProjectTask(id: string) {
+  const now = new Date().toISOString()
+  await db
+    .update(projectTasks)
+    .set({ archivedAt: now, updatedAt: now })
+    .where(eq(projectTasks.id, id))
+  revalidatePath("/projects")
+}
+
+export async function unarchiveProjectTask(id: string) {
+  const now = new Date().toISOString()
+  await db
+    .update(projectTasks)
+    .set({ archivedAt: null, updatedAt: now })
+    .where(eq(projectTasks.id, id))
+  revalidatePath("/projects")
+}
+
+export async function archiveAllDoneInProject(projectId: string): Promise<number> {
+  const now = new Date().toISOString()
+  const doneTasks = await db
+    .select()
+    .from(projectTasks)
+    .where(
+      and(
+        eq(projectTasks.projectId, projectId),
+        eq(projectTasks.status, "done"),
+        isNull(projectTasks.archivedAt),
+      ),
+    )
+    .all()
+  if (doneTasks.length === 0) return 0
+  for (const t of doneTasks) {
+    await db
+      .update(projectTasks)
+      .set({ archivedAt: now, updatedAt: now })
+      .where(eq(projectTasks.id, t.id))
+  }
+  revalidatePath("/projects")
+  return doneTasks.length
 }

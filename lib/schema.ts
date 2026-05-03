@@ -17,6 +17,7 @@ export const tasks = sqliteTable("tasks", {
   }),
   parentId: text("parent_id"),
   isTemplate: integer("is_template", { mode: "boolean" }).notNull().default(false),
+  archivedAt: text("archived_at"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
@@ -88,6 +89,7 @@ export const projectTasks = sqliteTable("project_tasks", {
   calendarId: text("calendar_id"),
   order: integer("order").notNull().default(0),
   parentId: text("parent_id"),
+  archivedAt: text("archived_at"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 })

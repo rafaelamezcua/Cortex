@@ -1,8 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { toggleTask, deleteTask } from "@/lib/actions/tasks"
-import { Check, Trash2, Clock, AlertTriangle, GripVertical, Repeat } from "lucide-react"
+import { toggleTask, deleteTask, archiveAllDone } from "@/lib/actions/tasks"
+import { Check, Trash2, Clock, AlertTriangle, GripVertical, Repeat, Archive } from "lucide-react"
 import { useTransition, useState } from "react"
 import { TaskModal } from "./task-modal"
 import {
@@ -214,6 +214,20 @@ export function KanbanView({ tasks: allTasks }: { tasks: Task[] }) {
 
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null
 
+  // Show only recent done tasks by default; let user expand to see older
+  const [showOlderDone, setShowOlderDone] = useState(false)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgoIso = sevenDaysAgo.toISOString()
+
+  function handleClearDone(count: number) {
+    if (count === 0) return
+    if (!confirm(`Archive ${count} completed task${count === 1 ? "" : "s"}?`)) return
+    startTransition(async () => {
+      await archiveAllDone()
+    })
+  }
+
   return (
     <>
       <DndContext
@@ -224,9 +238,20 @@ export function KanbanView({ tasks: allTasks }: { tasks: Task[] }) {
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {columns.map((col) => {
-            const columnTasks = tasks
+            const allColumnTasks = tasks
               .filter((t) => t.status === col.key)
-              .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+              .sort((a, b) =>
+                col.key === "done"
+                  ? b.updatedAt.localeCompare(a.updatedAt)
+                  : priorityOrder[a.priority] - priorityOrder[b.priority],
+              )
+
+            // For the Done column, hide older completions by default
+            const isDone = col.key === "done"
+            const visibleTasks = isDone && !showOlderDone
+              ? allColumnTasks.filter((t) => t.updatedAt >= sevenDaysAgoIso)
+              : allColumnTasks
+            const hiddenCount = allColumnTasks.length - visibleTasks.length
 
             return (
               <div key={col.key} className="space-y-3">
@@ -237,25 +262,54 @@ export function KanbanView({ tasks: allTasks }: { tasks: Task[] }) {
                     {col.label}
                   </h3>
                   <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-background-secondary px-1.5 text-[11px] font-medium text-foreground-quaternary">
-                    {columnTasks.length}
+                    {allColumnTasks.length}
                   </span>
+                  {isDone && allColumnTasks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearDone(allColumnTasks.length)}
+                      className="ml-auto flex items-center gap-1 rounded-[--radius-sm] px-1.5 py-0.5 text-[10px] font-medium text-foreground-quaternary transition-colors hover:bg-surface-hover hover:text-foreground"
+                      title="Archive all done tasks"
+                    >
+                      <Archive className="h-2.5 w-2.5" />
+                      Clear
+                    </button>
+                  )}
                 </div>
 
                 <DroppableColumn id={col.key}>
-                  {columnTasks.length === 0 ? (
+                  {visibleTasks.length === 0 ? (
                     <p className="py-8 text-center text-xs text-foreground-quaternary">
-                      {col.key === "done"
-                        ? "Nothing completed yet"
+                      {isDone
+                        ? "Nothing completed recently"
                         : "Drag tasks here"}
                     </p>
                   ) : (
-                    columnTasks.map((task) => (
+                    visibleTasks.map((task) => (
                       <DraggableCard
                         key={task.id}
                         task={task}
                         onEdit={() => setEditingTask(task)}
                       />
                     ))
+                  )}
+                  {isDone && hiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOlderDone(true)}
+                      className="w-full rounded-[--radius-sm] py-1.5 text-[11px] font-medium text-foreground-quaternary transition-colors hover:bg-surface-hover hover:text-foreground"
+                    >
+                      Show {hiddenCount} older
+                    </button>
+                  )}
+                  {isDone && showOlderDone && allColumnTasks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOlderDone(false)}
+                      className="w-full rounded-[--radius-sm] py-1.5 text-[11px] font-medium text-foreground-quaternary transition-colors hover:bg-surface-hover hover:text-foreground"
+                    >
+                      Hide older
+                    </button>
                   )}
                 </DroppableColumn>
               </div>

@@ -5,9 +5,10 @@ import {
   deleteTask,
   addSubtask,
   toggleTask,
+  archiveTask,
 } from "@/lib/actions/tasks"
 import { Button } from "@/app/components/ui/button"
-import { X, Trash2, Save, Plus, Check, Repeat } from "lucide-react"
+import { X, Trash2, Save, Plus, Check, Repeat, Archive } from "lucide-react"
 import { useState, useTransition, useEffect } from "react"
 import { cn } from "@/lib/utils"
 
@@ -84,8 +85,15 @@ export function TaskModal({ task, subtasks = [], onClose }: TaskModalProps) {
     })
   }
 
-  function handleDelete() {
-    if (!confirm("Delete this task?")) return
+  function handleArchive() {
+    startTransition(async () => {
+      await archiveTask(task.id)
+      onClose()
+    })
+  }
+
+  function handleDeleteForever() {
+    if (!confirm("Delete forever? This can't be undone.")) return
     startTransition(async () => {
       await deleteTask(task.id)
       onClose()
@@ -300,14 +308,26 @@ export function TaskModal({ task, subtasks = [], onClose }: TaskModalProps) {
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border-light/40">
-            <button
-              onClick={handleDelete}
-              disabled={isPending}
-              className="flex items-center gap-1.5 rounded-[--radius-md] px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete task
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleArchive}
+                disabled={isPending}
+                className="flex items-center gap-1.5 rounded-[--radius-md] px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                title="Hide from active views, keeps the record"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Archive
+              </button>
+              <button
+                onClick={handleDeleteForever}
+                disabled={isPending}
+                className="flex items-center gap-1.5 rounded-[--radius-md] px-2.5 py-1.5 text-[11px] font-medium text-foreground-quaternary transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+                title="Permanently delete — cannot be undone"
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete forever
+              </button>
+            </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={onClose}>
                 {hasChanges ? "Discard" : "Close"}

@@ -10,7 +10,7 @@ import {
   journalEntries,
   pomodoroSessions,
 } from "@/lib/schema"
-import { eq, ne, and, gte, lte } from "drizzle-orm"
+import { eq, ne, and, gte, lte, isNull } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import {
   getGoogleCalendarEvents,
@@ -133,7 +133,7 @@ export const aiTools = {
       const allTasks = await db
         .select()
         .from(tasks)
-        .where(ne(tasks.status, "done"))
+        .where(and(ne(tasks.status, "done"), isNull(tasks.archivedAt)))
         .all()
 
       const match = allTasks.find(
@@ -162,7 +162,7 @@ export const aiTools = {
   }),
 
   listTasks: tool({
-    description: "List Rafael's current tasks, optionally filtered by status",
+    description: "List Rafael's current tasks, optionally filtered by status. Excludes archived tasks.",
     inputSchema: z.object({
       status: z
         .enum(["all", "active", "done"])
@@ -175,16 +175,20 @@ export const aiTools = {
         result = await db
           .select()
           .from(tasks)
-          .where(ne(tasks.status, "done"))
+          .where(and(ne(tasks.status, "done"), isNull(tasks.archivedAt)))
           .all()
       } else if (status === "done") {
         result = await db
           .select()
           .from(tasks)
-          .where(eq(tasks.status, "done"))
+          .where(and(eq(tasks.status, "done"), isNull(tasks.archivedAt)))
           .all()
       } else {
-        result = await db.select().from(tasks).all()
+        result = await db
+          .select()
+          .from(tasks)
+          .where(isNull(tasks.archivedAt))
+          .all()
       }
 
       return {
@@ -200,15 +204,88 @@ export const aiTools = {
     },
   }),
 
+  archiveTask: tool({
+    description:
+      "Archive a task by title. Hides it from active views but keeps the record. Use when Rafael says 'archive', 'clear', or 'hide' a task.",
+    inputSchema: z.object({
+      title: z
+        .string()
+        .describe("The title (or partial title) of the task to archive"),
+    }),
+    execute: async ({ title }) => {
+      const allTasks = await db
+        .select()
+        .from(tasks)
+        .where(isNull(tasks.archivedAt))
+        .all()
+      const match = allTasks.find(
+        (t) =>
+          t.title.toLowerCase().includes(title.toLowerCase()) ||
+          title.toLowerCase().includes(t.title.toLowerCase()),
+      )
+      if (!match) {
+        return { success: false, message: `No task found matching "${title}".` }
+      }
+      const now = new Date().toISOString()
+      await db
+        .update(tasks)
+        .set({ archivedAt: now, updatedAt: now })
+        .where(eq(tasks.id, match.id))
+      return {
+        success: true,
+        message: `Archived "${match.title}". You can find it in the Archived tab.`,
+      }
+    },
+  }),
+
+  clearDone: tool({
+    description:
+      "Archive every completed task at once. Use when Rafael says 'clear my done', 'clean up done column', 'archive completed', etc.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const now = new Date().toISOString()
+      const doneTasks = await db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.status, "done"),
+            eq(tasks.isTemplate, false),
+            isNull(tasks.archivedAt),
+          ),
+        )
+        .all()
+      if (doneTasks.length === 0) {
+        return { success: true, count: 0, message: "Nothing in done to clear." }
+      }
+      for (const t of doneTasks) {
+        await db
+          .update(tasks)
+          .set({ archivedAt: now, updatedAt: now })
+          .where(eq(tasks.id, t.id))
+      }
+      return {
+        success: true,
+        count: doneTasks.length,
+        message: `Archived ${doneTasks.length} completed task${doneTasks.length === 1 ? "" : "s"}.`,
+      }
+    },
+  }),
+
   deleteTask: tool({
-    description: "Delete a task by title",
+    description:
+      "Permanently delete a task by title. WARNING: this is irreversible. Prefer archiveTask unless Rafael explicitly says delete forever.",
     inputSchema: z.object({
       title: z
         .string()
         .describe("The title (or partial title) of the task to delete"),
     }),
     execute: async ({ title }) => {
-      const allTasks = await db.select().from(tasks).all()
+      const allTasks = await db
+        .select()
+        .from(tasks)
+        .where(isNull(tasks.archivedAt))
+        .all()
 
       const match = allTasks.find(
         (t) =>

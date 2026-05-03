@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db"
 import { tasks, calendarEvents } from "@/lib/schema"
-import { eq, and } from "drizzle-orm"
+import { eq, and, isNull, isNotNull, desc, ne } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import { createGoogleCalendarEvent } from "@/lib/integrations/google-calendar"
@@ -317,14 +317,155 @@ export async function deleteTask(id: string) {
 }
 
 export async function getTasks() {
-  // Non-template tasks only. Includes both parents and subtasks — the UI
-  // composes the tree client-side via parentId.
+  // Non-template, non-archived tasks. Includes both parents and subtasks —
+  // the UI composes the tree client-side via parentId.
   return db
     .select()
     .from(tasks)
-    .where(eq(tasks.isTemplate, false))
+    .where(and(eq(tasks.isTemplate, false), isNull(tasks.archivedAt)))
     .orderBy(tasks.createdAt)
     .all()
+}
+
+export async function getArchivedTasks() {
+  return db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.isTemplate, false), isNotNull(tasks.archivedAt)))
+    .orderBy(desc(tasks.archivedAt))
+    .all()
+}
+
+// ---------- Archive ops ----------
+
+export async function archiveTask(id: string) {
+  const now = new Date().toISOString()
+  // Archive the task and all its subtasks together so they disappear cohesively
+  await db
+    .update(tasks)
+    .set({ archivedAt: now, updatedAt: now })
+    .where(eq(tasks.id, id))
+  await db
+    .update(tasks)
+    .set({ archivedAt: now, updatedAt: now })
+    .where(eq(tasks.parentId, id))
+  revalidatePath("/tasks")
+  revalidatePath("/")
+}
+
+export async function unarchiveTask(id: string) {
+  const now = new Date().toISOString()
+  await db
+    .update(tasks)
+    .set({ archivedAt: null, updatedAt: now })
+    .where(eq(tasks.id, id))
+  // Bring subtasks back too
+  await db
+    .update(tasks)
+    .set({ archivedAt: null, updatedAt: now })
+    .where(eq(tasks.parentId, id))
+  revalidatePath("/tasks")
+  revalidatePath("/")
+}
+
+export async function archiveAllDone(): Promise<number> {
+  const now = new Date().toISOString()
+  const doneTasks = await db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.status, "done"),
+        eq(tasks.isTemplate, false),
+        isNull(tasks.archivedAt),
+      ),
+    )
+    .all()
+  if (doneTasks.length === 0) return 0
+  for (const t of doneTasks) {
+    await db
+      .update(tasks)
+      .set({ archivedAt: now, updatedAt: now })
+      .where(eq(tasks.id, t.id))
+  }
+  revalidatePath("/tasks")
+  revalidatePath("/")
+  return doneTasks.length
+}
+
+// Roll over overdue active tasks: bump their dueDate to today.
+// Returns list of {id, title, oldDue} for logging.
+export async function rolloverOverdueTasks(): Promise<
+  { id: string; title: string; oldDue: string }[]
+> {
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+  const updatedAt = now.toISOString()
+
+  const candidates = await db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        ne(tasks.status, "done"),
+        eq(tasks.isTemplate, false),
+        isNull(tasks.archivedAt),
+      ),
+    )
+    .all()
+
+  const moved: { id: string; title: string; oldDue: string }[] = []
+  for (const t of candidates) {
+    if (!t.dueDate) continue
+    if (t.dueDate >= todayStr) continue
+    moved.push({ id: t.id, title: t.title, oldDue: t.dueDate })
+    await db
+      .update(tasks)
+      .set({ dueDate: todayStr, updatedAt })
+      .where(eq(tasks.id, t.id))
+  }
+  if (moved.length > 0) {
+    revalidatePath("/tasks")
+    revalidatePath("/")
+  }
+  return moved
+}
+
+// Auto-archive done tasks whose updatedAt is older than `days` ago.
+export async function archiveOldDone(days: number): Promise<number> {
+  if (days <= 0) return 0
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const cutoffIso = cutoff.toISOString()
+  const now = new Date().toISOString()
+
+  const candidates = await db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.status, "done"),
+        eq(tasks.isTemplate, false),
+        isNull(tasks.archivedAt),
+      ),
+    )
+    .all()
+
+  let archived = 0
+  for (const t of candidates) {
+    if (t.updatedAt < cutoffIso) {
+      await db
+        .update(tasks)
+        .set({ archivedAt: now })
+        .where(eq(tasks.id, t.id))
+      archived++
+    }
+  }
+  if (archived > 0) {
+    revalidatePath("/tasks")
+    revalidatePath("/")
+  }
+  return archived
 }
 
 export async function getTaskTemplates() {
