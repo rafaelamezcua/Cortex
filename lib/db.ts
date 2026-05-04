@@ -11,11 +11,24 @@ const dbDir = path.dirname(dbPath)
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true })
 }
+
+// Skip the heavy schema-setup work during the Next.js production build.
+// 31 parallel workers all try to lock the same SQLite file at module load
+// and crash with SQLITE_BUSY. The deployed runtime still runs migrations
+// because NEXT_PHASE only carries the value during `next build`.
+const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build"
+
 const sqlite = new Database(dbPath)
 sqlite.pragma("journal_mode = WAL")
 sqlite.pragma("foreign_keys = ON")
+// Wait briefly when another reader/writer holds the lock instead of
+// failing instantly with SQLITE_BUSY.
+sqlite.pragma("busy_timeout = 5000")
 
-// Auto-create tables if they don't exist (for fresh deployments)
+// Auto-create tables if they don't exist (for fresh deployments).
+// Skip during the Next.js build because 31 parallel workers all hit this
+// at module evaluation and lock contention crashes the build.
+if (!IS_BUILD_PHASE) {
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
@@ -237,5 +250,6 @@ sqlite.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_triage_source_ref
     ON triage_suggestions (source, source_ref_id);
 `)
+} // end !IS_BUILD_PHASE
 
 export const db = drizzle(sqlite, { schema })
