@@ -194,3 +194,26 @@ export const userSettings = sqliteTable("user_settings", {
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull(),
 })
+
+// Suggestions awaiting Rafael's accept/dismiss decision.
+// Currently used for email -> task triage; designed to grow to other sources.
+export const triageSuggestions = sqliteTable("triage_suggestions", {
+  id: text("id").primaryKey(),
+  source: text("source").notNull(), // "email", "canvas", etc.
+  sourceRefId: text("source_ref_id"), // gmail message id, canvas assignment id
+  kind: text("kind", { enum: ["task", "event", "note"] })
+    .notNull()
+    .default("task"),
+  title: text("title").notNull(),
+  description: text("description"),
+  suggestedDueDate: text("suggested_due_date"),
+  suggestedPriority: text("suggested_priority", {
+    enum: ["low", "medium", "high"],
+  }).default("medium"),
+  payload: text("payload"), // JSON for source-specific extra fields
+  status: text("status", { enum: ["pending", "accepted", "dismissed"] })
+    .notNull()
+    .default("pending"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})

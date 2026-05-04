@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 
 import { getProject, getProjectTasks } from "@/lib/actions/projects"
 import { ProjectBoard } from "@/app/components/projects/project-board"
+import { RecallStrip } from "@/app/components/projects/recall-strip"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -73,6 +74,9 @@ export default async function ProjectPage({
           style={{ width: `${progress}%`, backgroundColor: project.color }}
         />
       </div>
+
+      {/* Recall — pick up where you left off */}
+      <RecallStrip projectId={id} />
 
       {/* Board */}
       <ProjectBoard

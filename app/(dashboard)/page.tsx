@@ -10,6 +10,7 @@ import { CanvasWidget } from "@/app/components/dashboard/canvas-widget"
 import { HabitsWidget } from "@/app/components/dashboard/habits-widget"
 import { LumaStrip } from "@/app/components/dashboard/luma-strip"
 import { ReschedulePanel } from "@/app/components/dashboard/reschedule-panel"
+import { TriageWidget } from "@/app/components/dashboard/triage-widget"
 import { proposeReschedule } from "@/lib/actions/reviews"
 import { isCanvasConnected } from "@/lib/integrations/canvas"
 import { getHabits, getHabitLogs } from "@/lib/actions/habits"
@@ -193,6 +194,9 @@ export default async function DashboardPage() {
 
       {/* Sunday smart reschedule for overdue tasks */}
       {showReschedule && <ReschedulePanel proposals={rescheduleProposals} />}
+
+      {/* Inbox suggestions awaiting your call */}
+      <TriageWidget />
 
       {/* Today hero */}
       <DailyBriefing events={todaysEvents} tasks={tasks} />

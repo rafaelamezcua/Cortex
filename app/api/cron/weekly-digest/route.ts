@@ -6,6 +6,7 @@ import {
   formatLocalDate,
 } from "@/lib/actions/automations"
 import { getSettings } from "@/lib/actions/settings"
+import { findStaleTasks, formatStaleSummary } from "@/lib/actions/stale-tasks"
 
 export async function POST(request: Request) {
   const unauthorized = guardCronRequest(request)
@@ -26,7 +27,23 @@ export async function POST(request: Request) {
       digest.patterns.length > 0
         ? ["", "Notable patterns:", ...digest.patterns.map((p, i) => `${i + 1}. ${p}`)]
         : []
-    const digestBlock = [header, "", digest.summary, ...patternLines].join("\n")
+    // Stale-status sweep: surface stuck tasks for kill-or-commit
+    const staleReport = await findStaleTasks()
+    const staleLines = formatStaleSummary(staleReport)
+    const staleBlock =
+      staleLines.length > 0
+        ? ["", "Kill or commit:", ...staleLines].join("\n")
+        : ""
+
+    const digestBlock = [
+      header,
+      "",
+      digest.summary,
+      ...patternLines,
+      staleBlock,
+    ]
+      .filter(Boolean)
+      .join("\n")
 
     // Append rather than overwrite an existing journal entry.
     const existing = await getJournalEntry(today)

@@ -219,6 +219,23 @@ sqlite.exec(`
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS triage_suggestions (
+    id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    source_ref_id TEXT,
+    kind TEXT NOT NULL DEFAULT 'task',
+    title TEXT NOT NULL,
+    description TEXT,
+    suggested_due_date TEXT,
+    suggested_priority TEXT DEFAULT 'medium',
+    payload TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_triage_status ON triage_suggestions (status, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_triage_source_ref
+    ON triage_suggestions (source, source_ref_id);
 `)
 
 export const db = drizzle(sqlite, { schema })

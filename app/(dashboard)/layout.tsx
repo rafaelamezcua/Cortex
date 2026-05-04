@@ -1,4 +1,5 @@
 import { Sidebar } from "@/app/components/layout/sidebar"
+import { QuickCaptureModal } from "@/app/components/quick-capture/quick-capture-modal"
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+      <QuickCaptureModal />
     </div>
   )
 }

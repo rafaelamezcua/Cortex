@@ -1,13 +1,16 @@
 export const dynamic = "force-dynamic"
 
 import { getRules, getRecentRuns } from "@/lib/actions/rules"
+import { listPresets } from "@/lib/actions/rule-presets"
 import { RulesList } from "@/app/components/rules/rules-list"
 import { RunsPanel } from "@/app/components/rules/runs-panel"
+import { PresetsSection } from "@/app/components/rules/presets-section"
 
 export default async function RulesPage() {
-  const [rules, runs] = await Promise.all([
+  const [rules, runs, presets] = await Promise.all([
     getRules(),
     getRecentRuns(10),
+    listPresets(),
   ])
 
   const ruleNames: Record<string, string> = {}
@@ -27,6 +30,8 @@ export default async function RulesPage() {
           the morning brief so you don&rsquo;t have to remember.
         </p>
       </section>
+
+      <PresetsSection presets={presets} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <RulesList rules={rules} />

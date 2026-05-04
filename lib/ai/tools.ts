@@ -942,4 +942,72 @@ export const aiTools = {
       }
     },
   }),
+
+  findStaleTasks: tool({
+    description:
+      "Find tasks that have stalled and need attention: in_progress >7 days, todos with no due date untouched >14 days, and overdue tasks with no recent activity. Use when Rafael asks 'what am I avoiding', 'what's stuck', or 'help me clean up my tasks'.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const { findStaleTasks } = await import("@/lib/actions/stale-tasks")
+      const report = await findStaleTasks()
+      return {
+        total: report.total,
+        inProgressTooLong: report.inProgressTooLong.map((t) => ({
+          title: t.title,
+          daysSinceUpdate: t.daysSinceUpdate,
+        })),
+        noDueDateOld: report.noDueDateOld.map((t) => ({
+          title: t.title,
+          daysSinceUpdate: t.daysSinceUpdate,
+        })),
+        overdueWithDueDate: report.stuckWithDueDate.map((t) => ({
+          title: t.title,
+          dueDate: t.dueDate,
+          daysSinceUpdate: t.daysSinceUpdate,
+        })),
+      }
+    },
+  }),
+
+  recallProject: tool({
+    description:
+      "Recall recent activity on a project — the last few tasks, notes, events, focus sessions, and journal mentions. Use when Rafael asks 'what was I doing in [project]?' or 'where am I on Nymbus' or 'catch me up on Markit'. Pass the project name (fuzzy match).",
+    inputSchema: z.object({
+      projectName: z
+        .string()
+        .describe("Name of the project to recall (fuzzy matched)"),
+    }),
+    execute: async ({ projectName }) => {
+      const { recallProjectActivity } = await import(
+        "@/lib/actions/project-recall"
+      )
+      const { db } = await import("@/lib/db")
+      const { projects: projectsTable } = await import("@/lib/schema")
+      const all = await db.select().from(projectsTable).all()
+      const match = all.find(
+        (p) =>
+          p.name.toLowerCase().includes(projectName.toLowerCase()) ||
+          projectName.toLowerCase().includes(p.name.toLowerCase()),
+      )
+      if (!match) {
+        return {
+          ok: false,
+          message: `No project matching "${projectName}".`,
+          available: all.map((p) => p.name),
+        }
+      }
+      const items = await recallProjectActivity(match.id, 8)
+      return {
+        ok: true,
+        project: match.name,
+        items: items.map((i) => ({
+          kind: i.kind,
+          title: i.title,
+          when: i.timestamp,
+          context: i.meta,
+        })),
+        count: items.length,
+      }
+    },
+  }),
 }
